@@ -1,196 +1,430 @@
 <!DOCTYPE html>
 <html lang="es">
 <head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>SmartWeb Hub - ¡Un año de Internet más!</title>
-    <style>
-        body {
-            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
-            background-color: #0d1117;
-            color: white;
-            display: flex;
-            flex-direction: column;
-            align-items: center;
-            justify-content: center;
-            min-height: 100vh;
-            margin: 0;
-            text-align: center;
-            overflow-x: hidden;
-        }
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1.0">
 
-        .celebration-bg {
-            position: fixed;
-            top: 0; left: 0; width: 100%; height: 100%;
-            background: radial-gradient(circle at center, #161b22 0%, #0d1117 100%);
-            z-index: -2;
-        }
+<title>Smart Apps</title>
 
-        .anniversary-header {
-            background: linear-gradient(90deg, #ffd700, #ffffff, #ffd700);
-            background-size: 200% auto;
-            -webkit-background-clip: text;
-            -webkit-text-fill-color: transparent;
-            animation: shine 3s linear infinite;
-            font-size: 2.8rem;
-            font-weight: 800;
-            margin: 20px 0;
-        }
+<style>
 
-        @keyframes shine {
-            to { background-position: 200% center; }
-        }
+body{
+    font-family:'Segoe UI',Tahoma,Geneva,Verdana,sans-serif;
+    background-color:#0d1117;
+    color:white;
 
-        /* BOTÓN PROYECTO ORIGINAL (AZUL) */
-        .btn-original {
-            display: inline-block;
-            background-color: #0056b3;
-            color: white;
-            padding: 12px 25px;
-            border-radius: 12px;
-            text-decoration: none;
-            font-weight: bold;
-            margin-bottom: 40px;
-            transition: all 0.3s;
-            border: 1px solid #58a6ff;
-            box-shadow: 0 4px 15px rgba(0, 86, 179, 0.4);
-        }
-        .btn-original:hover {
-            background-color: #007bff;
-            transform: scale(1.05);
-        }
-        .btn-original small {
-            display: block;
-            font-size: 0.75rem;
-            font-weight: normal;
-            opacity: 0.9;
-            margin-top: 4px;
-        }
+    display:flex;
+    flex-direction:column;
+    align-items:center;
+    justify-content:center;
 
-        .container {
-            display: flex;
-            gap: 25px;
-            flex-wrap: wrap;
-            justify-content: center;
-            padding: 20px;
-        }
+    min-height:100vh;
 
-        /* SMART-WEB: EL MÁS IMPORTANTE */
-        .card-main {
-            background: linear-gradient(145deg, #1c2128, #0d1117);
-            border: 3px solid #ffd700 !important;
-            transform: scale(1.05);
-            box-shadow: 0 0 30px rgba(255, 215, 0, 0.2);
-            width: 360px !important;
-        }
+    margin:0;
 
-        .card {
-            background: #161b22;
-            border: 1px solid #30363d;
-            border-radius: 16px;
-            padding: 30px;
-            width: 280px;
-            transition: all 0.4s cubic-bezier(0.175, 0.885, 0.32, 1.275);
-            text-decoration: none;
-            color: white;
-            position: relative;
-        }
+    text-align:center;
 
-        .card:hover {
-            transform: translateY(-15px);
-            border-color: #58a6ff;
-        }
+    overflow-x:hidden;
+}
 
-        .badge-star {
-            background: #ffd700;
-            color: #000;
-            padding: 5px 15px;
-            border-radius: 50px;
-            font-size: 0.8rem;
-            font-weight: bold;
-            position: absolute;
-            top: -15px;
-            left: 50%;
-            transform: translateX(-50%);
-        }
+.celebration-bg{
+    position:fixed;
 
-        .features {
-            font-size: 0.85rem;
-            color: #58a6ff;
-            margin-bottom: 20px;
-            font-weight: bold;
-        }
+    top:0;
+    left:0;
 
-        .btn-action {
-            display: inline-block;
-            background-color: #238636;
-            color: white;
-            padding: 10px 20px;
-            border-radius: 8px;
-            text-decoration: none;
-            font-weight: bold;
-        }
+    width:100%;
+    height:100%;
 
-        .btn-gold {
-            background: linear-gradient(45deg, #ffd700, #ffae00);
-            color: black;
-        }
+    background:
+        radial-gradient(
+            circle at center,
+            #161b22 0%,
+            #0d1117 100%
+        );
 
-        footer {
-            margin-top: 60px;
-            padding: 30px;
-            border-top: 1px solid #30363d;
-            width: 100%;
-            color: #8b949e;
-        }
-    </style>
+    z-index:-2;
+}
+
+.anniversary-header{
+    background:
+        linear-gradient(
+            90deg,
+            #ffd700,
+            #ffffff,
+            #ffd700
+        );
+
+    background-size:200% auto;
+
+    -webkit-background-clip:text;
+    -webkit-text-fill-color:transparent;
+
+    animation:shine 3s linear infinite;
+
+    font-size:2.8rem;
+
+    font-weight:800;
+
+    margin:20px 0;
+}
+
+@keyframes shine{
+    to{
+        background-position:200% center;
+    }
+}
+
+.container{
+    display:flex;
+
+    gap:25px;
+
+    flex-wrap:wrap;
+
+    justify-content:center;
+
+    padding:20px;
+
+    max-width:1250px;
+}
+
+
+/* =====================================================
+   TODAS LAS TARJETAS DORADAS
+===================================================== */
+
+.card{
+    background:
+        linear-gradient(
+            145deg,
+            #1c2128,
+            #0d1117
+        );
+
+    border:3px solid #ffd700;
+
+    border-radius:16px;
+
+    padding:30px;
+
+    width:280px;
+
+    transition:
+        all .4s
+        cubic-bezier(
+            .175,
+            .885,
+            .32,
+            1.275
+        );
+
+    text-decoration:none;
+
+    color:white;
+
+    position:relative;
+
+    box-shadow:
+        0 0 22px
+        rgba(255,215,0,.14);
+}
+
+.card:hover{
+    transform:translateY(-15px);
+
+    border-color:#ffe45c;
+
+    box-shadow:
+        0 0 35px
+        rgba(255,215,0,.28);
+}
+
+
+/* =====================================================
+   TARJETA PRINCIPAL
+===================================================== */
+
+.card-main{
+    width:360px !important;
+
+    box-shadow:
+        0 0 30px
+        rgba(255,215,0,.22);
+}
+
+.card-main:hover{
+    border-color:#ffd700 !important;
+}
+
+
+/* =====================================================
+   ETIQUETA
+===================================================== */
+
+.badge-star{
+    background:#ffd700;
+
+    color:#000;
+
+    padding:5px 15px;
+
+    border-radius:50px;
+
+    font-size:.8rem;
+
+    font-weight:bold;
+
+    position:absolute;
+
+    top:-15px;
+
+    left:50%;
+
+    transform:translateX(-50%);
+}
+
+
+/* =====================================================
+   TEXTO DESTACADO
+===================================================== */
+
+.features{
+    font-size:.85rem;
+
+    color:#58a6ff;
+
+    margin-bottom:20px;
+
+    font-weight:bold;
+}
+
+
+/* =====================================================
+   BOTONES
+===================================================== */
+
+.btn-action{
+    display:inline-block;
+
+    background-color:#238636;
+
+    color:white;
+
+    padding:10px 20px;
+
+    border-radius:8px;
+
+    text-decoration:none;
+
+    font-weight:bold;
+}
+
+.btn-gold{
+    background:
+        linear-gradient(
+            45deg,
+            #ffd700,
+            #ffae00
+        );
+
+    color:black;
+}
+
+
+/* =====================================================
+   FOOTER
+===================================================== */
+
+footer{
+    margin-top:60px;
+
+    padding:30px;
+
+    border-top:1px solid #30363d;
+
+    width:100%;
+
+    color:#8b949e;
+}
+
+
+/* =====================================================
+   MOVIL
+===================================================== */
+
+@media(max-width:600px){
+
+    .container{
+        flex-direction:column;
+
+        align-items:center;
+    }
+
+    .card,
+    .card-main{
+        width:min(
+            280px,
+            85vw
+        ) !important;
+
+        transform:none;
+    }
+
+    .anniversary-header{
+        font-size:2.2rem;
+    }
+
+}
+
+</style>
+
 </head>
+
 <body>
 
-    <div class="celebration-bg"></div>
+<div class="celebration-bg"></div>
 
-    <div class="anniversary-header">¡Un año de Internet más!</div>
-    
-    <!-- Botón Proyecto Original -->
-    <a href="https://lolatoralation.github.io" class="btn-original">
-        PROYECTO ORIGINAL
-        <small>(El primer sitio web de Max)</small>
+<div class="anniversary-header">
+    Smartium Apps
+</div>
+
+
+<div class="container">
+
+
+    <!-- SMART-WEB -->
+
+    <a
+        href="https://smartium25.github.io/smart-web/"
+        class="card card-main"
+    >
+
+        <div class="badge-star">
+            PRINCIPAL
+        </div>
+
+        <h2>
+            Smart-Web
+        </h2>
+
+        <p style="
+            color:#8b949e;
+            font-size:.95rem;
+            line-height:1.4;
+        ">
+            La plataforma social de Smartium
+            para compartir y descubrir contenido.
+        </p>
+
+        <div class="features">
+            VIDEOS • AMIGOS • CONTENIDO
+        </div>
+
+        <span class="btn-action btn-gold">
+            Abrir Smart-Web
+        </span>
+
     </a>
-    
-    <div class="container">
-        <!-- SMART-WEB SOCIAL (ENLACE ACTUALIZADO) -->
-        <a href="https://smartium25.github.io/smart-hub.github.io/" class="card card-main">
-            <div class="badge-star">PROYECTOS ESTRELLA 🏆</div>
-            <h2>Smart-Web y Smart-Chat</h2>
-            <p style="color: #8b949e; font-size: 0.95rem; line-height: 1.4;">
-                Las red sociales definitivas para Smartium. Una experiencia tipo YouTube con sistema de chats y amigos.
-            </p>
-            <div class="features">
-                🎬 VIDEOS • 💬 CHATS • 👥 AMIGOS
-            </div>
-            <span class="btn-action btn-gold">Entrar a la Red</span>
-        </a>
 
-        <!-- MEME HUB (ENLACE ACTUALIZADO) -->
-        <a href="https://smartium25.github.io/memehub.github.io/" class="card">
-            <h2>Meme Hub</h2>
-            <p style="color: #8b949e; font-size: 0.9rem;">Copia de YouTube enfocada en el mejor contenido de humor.</p>
-            <span class="btn-action">Visitar</span>
-        </a>
 
-        <!-- ROBLOX HUB (ENLACE ACTUALIZADO) -->
-        <a href="https://smartium25.github.io/robloxhub.github.io/" class="card">
-            <h2>Roblox Hub</h2>
-            <p style="color: #8b949e; font-size: 0.9rem;">El centro de noticias y recursos para fans de Roblox.</p>
-            <span class="btn-action">Visitar</span>
-        </a>
-    </div>
+    <!-- SMART-CHAT -->
 
-    <footer>
-        Celebrando la trayectoria <strong style="color:#ffd700">2025 - 2026</strong><br>
-        Hecho con pasión por <strong>Max de Smartium</strong>
-    </footer>
+    <a
+        href="https://smartium25.github.io/smart-chat/"
+        class="card"
+    >
+
+        <h2>
+            Smart-Chat
+        </h2>
+
+        <p style="
+            color:#8b949e;
+            font-size:.9rem;
+        ">
+            Mensajería privada para usuarios
+            de Smartium.
+        </p>
+
+        <div class="features">
+            MENSAJES • GRUPOS • PFP
+        </div>
+
+        <span class="btn-action btn-gold">
+            Abrir Smart-Chat
+        </span>
+
+    </a>
+
+
+    <!-- SMART-CALL -->
+
+    <a
+        href="https://smartium25.github.io/smart-call/"
+        class="card"
+    >
+
+        <h2>
+            Smart-Call
+        </h2>
+
+        <p style="
+            color:#8b949e;
+            font-size:.9rem;
+        ">
+            Llamadas privadas con cámara
+            y micrófono.
+        </p>
+
+        <div class="features">
+            VIDEO • AUDIO • PRIVADO
+        </div>
+
+        <span class="btn-action btn-gold">
+            Abrir Smart-Call
+        </span>
+
+    </a>
+
+
+    <!-- SMART-MOVIES -->
+
+    <a
+        href="https://smartium25.github.io/smart-movies/"
+        class="card"
+    >
+
+        <h2>
+            Smart-Movies
+        </h2>
+
+        <p style="
+            color:#8b949e;
+            font-size:.9rem;
+        ">
+            Películas y series para ver
+            desde Smartium.
+        </p>
+
+        <div class="features">
+            PELÍCULAS • SERIES
+        </div>
+
+        <span class="btn-action btn-gold">
+            Abrir Smart-Movies
+        </span>
+
+    </a>
+
+
+</div>
+
+
+<footer>
+    Smartium25
+</footer>
+
 
 </body>
 </html>
-

@@ -1,0 +1,873 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Smart-Web</title>
+    <script src="./url.js"></script>
+    <style>
+        :root {
+            --primary-cian: #00bcd4;
+            --background-dark: #121212;
+            --surface-light: #2c2c2c;
+            --text-white: #ffffff;
+            --text-lightgray: #b0b0b0;
+            --border-gray: #444444;
+            --accent-green: #4caf50;
+            --accent-red: #f44336;
+            --shadow-strong: rgba(0, 0, 0, 0.4);
+        }
+
+        body {
+            font-family: 'Segoe UI', sans-serif;
+            margin: 0;
+            background-color: var(--background-dark);
+            color: var(--text-white);
+            line-height: 1.6;
+            overflow-x: hidden;
+        }
+
+        #video-fullscreen-bg {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            z-index: -1;
+            background-color: #000;
+            display: none;
+        }
+
+        #real-video {
+            width: 100%;
+            height: 100%;
+            object-fit: cover;
+            filter: brightness(0.5);
+        }
+
+        #main-app-content {
+            display: none;
+            padding: 20px 40px;
+            max-width: 1200px;
+            margin: 0 auto;
+            position: relative;
+            z-index: 1;
+        }
+
+        .app-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 15px 0;
+            border-bottom: 1px solid var(--border-gray);
+            margin-bottom: 30px;
+        }
+
+        .app-header h1 {
+            color: var(--primary-cian);
+            font-size: 2em;
+            margin: 0;
+        }
+
+        .user-controls span {
+            margin-right: 20px;
+            font-size: 1.1em;
+            color: var(--text-lightgray);
+        }
+
+        .user-controls button {
+            background-color: var(--surface-light);
+            color: var(--text-white);
+            border: 1px solid var(--border-gray);
+            padding: 8px 18px;
+            border-radius: 6px;
+            cursor: pointer;
+            transition: background-color 0.3s ease;
+        }
+
+        .user-controls button:hover {
+            background-color: #444444;
+        }
+
+        .section-card {
+            background-color: var(--surface-light);
+            padding: 30px;
+            border-radius: 12px;
+            margin-bottom: 30px;
+            box-shadow: 0 4px 15px var(--shadow-strong);
+            border: 1px solid var(--border-gray);
+        }
+
+        .section-card h3 {
+            color: var(--primary-cian);
+            margin-top: 0;
+            margin-bottom: 25px;
+            font-size: 1.8em;
+            border-bottom: 1px solid rgba(0, 188, 212, 0.3);
+            padding-bottom: 10px;
+        }
+
+        .upload-form input[type="text"],
+        .upload-form input[type="file"] {
+            width: calc(100% - 24px);
+            padding: 12px;
+            margin-bottom: 15px;
+            border: 1px solid var(--border-gray);
+            border-radius: 6px;
+            background-color: #3a3a3a;
+            color: var(--text-white);
+            font-size: 1em;
+            box-sizing: border-box;
+        }
+
+        .upload-form input[type="file"] {
+            padding: 10px;
+            cursor: pointer;
+        }
+
+        .upload-form input[type="file"]::-webkit-file-upload-button {
+            background-color: var(--primary-cian);
+            color: var(--background-dark);
+            border: none;
+            padding: 8px 15px;
+            border-radius: 4px;
+            cursor: pointer;
+        }
+
+        .upload-form button {
+            width: auto;
+            padding: 12px 25px;
+            background-color: var(--primary-cian);
+            color: var(--background-dark);
+            border: none;
+            border-radius: 6px;
+            font-weight: bold;
+            cursor: pointer;
+            transition: background-color 0.3s ease, transform 0.2s ease;
+        }
+
+        .upload-form button:hover {
+            background-color: #00a4bd;
+            transform: translateY(-2px);
+        }
+
+        #upload-status {
+            margin-top: 20px;
+            font-size: 0.95em;
+        }
+
+        .gallery-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
+            gap: 25px;
+        }
+
+        .video-item-card {
+            background-color: #252525;
+            border-radius: 10px;
+            overflow: hidden;
+            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.3);
+            transition: transform 0.2s ease, box-shadow 0.2s ease;
+            border: 1px solid #3a3a3a;
+        }
+
+        .video-item-card:hover {
+            transform: translateY(-5px);
+            box-shadow: 0 6px 20px var(--shadow-strong);
+        }
+
+        .video-item-card video {
+            width: 100%;
+            height: 180px;
+            object-fit: cover;
+            background-color: #000;
+            display: block;
+        }
+
+        .video-info {
+            padding: 15px;
+        }
+
+        .video-info h4 {
+            margin-top: 0;
+            margin-bottom: 8px;
+            font-size: 1.15em;
+            color: var(--primary-cian);
+            white-space: nowrap;
+            overflow: hidden;
+            text-overflow: ellipsis;
+        }
+
+        .video-info p {
+            font-size: 0.9em;
+            color: var(--text-lightgray);
+            margin: 0;
+        }
+
+        .msg-success {
+            color: var(--accent-green);
+        }
+
+        .msg-error {
+            color: var(--accent-red);
+        }
+
+        footer {
+            text-align: center;
+            padding: 30px;
+            margin-top: 50px;
+            border-top: 1px solid var(--border-gray);
+            color: var(--text-lightgray);
+            font-size: 0.9em;
+        }
+    </style>
+</head>
+
+<body>
+
+    <div id="video-fullscreen-bg">
+        <video id="real-video" loop muted autoplay playsinline>
+            <source src="real.mp4" type="video/mp4">
+            Tu navegador no soporta el tag de video.
+        </video>
+    </div>
+
+    <div id="main-app-content">
+
+        <div class="app-header">
+            <h1>SMART-WEB</h1>
+
+            <div class="user-controls">
+                <span id="username-display"></span>
+                <button onclick="logout()">Cerrar Sesión</button>
+            </div>
+        </div>
+
+        <div class="section-card">
+            <h3>Subir Nuevo Video</h3>
+
+            <div class="upload-form">
+                <input
+                    type="text"
+                    id="vid-title"
+                    placeholder="Título del video"
+                    required
+                >
+
+                <input
+                    type="file"
+                    id="vid-file"
+                    accept="video/mp4"
+                    required
+                >
+
+                <button onclick="uploadVideo()">
+                    SUBIR Y PROCESAR
+                </button>
+
+                <p id="upload-status"></p>
+            </div>
+        </div>
+
+        <div class="section-card">
+            <h3>Galería de Videos</h3>
+
+            <div id="video-grid" class="gallery-grid"></div>
+        </div>
+
+    </div>
+
+    <footer>
+        <p>&copy; 2026 Smart-Web. Todos los derechos reservados.</p>
+    </footer>
+
+    <script>
+
+        // =========================================================
+        // CONFIGURACIÓN
+        // =========================================================
+
+        const SERVER_URL = URL.web;
+
+        const KN_FOUNDATION_URL = URL.auth;
+
+        const TOKEN_KEY =
+            "smart_token";
+
+
+        // =========================================================
+        // VARIABLES
+        // =========================================================
+
+        let token =
+            localStorage.getItem(TOKEN_KEY);
+
+        let currentUser = null;
+
+
+        // =========================================================
+        // REDIRECCIÓN A KN FOUNDATION
+        // =========================================================
+
+        function redirectToKnFoundation() {
+
+            const currentUrl =
+                window.location.href;
+
+            const redirectUrl =
+                `${KN_FOUNDATION_URL}/?redirect=${encodeURIComponent(currentUrl)}`;
+
+            window.location.replace(redirectUrl);
+        }
+
+
+        // =========================================================
+        // OBTENER USUARIO
+        // =========================================================
+
+        async function getCurrentUser() {
+
+            if (!token) {
+                redirectToKnFoundation();
+                return null;
+            }
+
+            try {
+
+                const response =
+                    await fetch(
+                        `${SERVER_URL}/api/me`,
+                        {
+                            method: "GET",
+
+                            headers: {
+                                "Authorization": `Bearer ${token}`
+                            }
+                        }
+                    );
+
+
+                if (
+                    response.status === 401 ||
+                    response.status === 403
+                ) {
+
+                    localStorage.removeItem(TOKEN_KEY);
+
+                    token = null;
+
+                    redirectToKnFoundation();
+
+                    return null;
+                }
+
+
+                if (!response.ok) {
+
+                    throw new Error(
+                        "No se pudo verificar la sesión."
+                    );
+                }
+
+
+                const data =
+                    await response.json();
+
+
+                currentUser =
+                    data.user || data;
+
+
+                return currentUser;
+
+
+            } catch (error) {
+
+                console.error(
+                    "Error verificando sesión:",
+                    error
+                );
+
+                return null;
+            }
+        }
+
+
+        // =========================================================
+        // MOSTRAR SMART-WEB
+        // =========================================================
+
+        async function showMainApp() {
+
+            document.getElementById(
+                "main-app-content"
+            ).style.display = "block";
+
+
+            const usernameDisplay =
+                document.getElementById(
+                    "username-display"
+                );
+
+
+            if (currentUser) {
+
+                const username =
+                    currentUser.username ||
+                    "Usuario";
+
+                usernameDisplay.innerText =
+                    `Bienvenido, ${username}`;
+            }
+
+
+            // Fondo de video
+
+            const videoBgContainer =
+                document.getElementById(
+                    "video-fullscreen-bg"
+                );
+
+            const realVideo =
+                document.getElementById(
+                    "real-video"
+                );
+
+
+            videoBgContainer.style.display =
+                "block";
+
+
+            realVideo.play().catch(error => {
+
+                console.error(
+                    "Autoplay falló:",
+                    error
+                );
+
+            });
+
+
+            // Galería
+
+            loadVideoGallery();
+        }
+
+
+        // =========================================================
+        // CERRAR SESIÓN
+        // =========================================================
+
+        async function logout() {
+
+            try {
+
+                if (token) {
+
+                    await fetch(
+                        `${SERVER_URL}/api/logout`,
+                        {
+                            method: "POST",
+
+                            headers: {
+                                "Authorization":
+                                    `Bearer ${token}`
+                            }
+                        }
+                    );
+                }
+
+            } catch (error) {
+
+                console.error(
+                    "Error cerrando sesión:",
+                    error
+                );
+            }
+
+
+            localStorage.removeItem(
+                TOKEN_KEY
+            );
+
+
+            token = null;
+            currentUser = null;
+
+
+            redirectToKnFoundation();
+        }
+
+
+        // =========================================================
+        // CARGAR GALERÍA
+        // =========================================================
+
+        async function loadVideoGallery() {
+
+            const videoGrid =
+                document.getElementById(
+                    "video-grid"
+                );
+
+
+            videoGrid.innerHTML =
+                "Cargando videos...";
+
+
+            try {
+
+                const response =
+                    await fetch(
+                        `${SERVER_URL}/api/videos`
+                    );
+
+
+                if (!response.ok) {
+
+                    throw new Error(
+                        "Error al cargar videos."
+                    );
+                }
+
+
+                const data =
+                    await response.json();
+
+
+                // La nueva API puede devolver:
+                // [ ... ]
+                // o:
+                // { videos: [ ... ] }
+
+                const videos =
+                    Array.isArray(data)
+                        ? data
+                        : (
+                            Array.isArray(data.videos)
+                                ? data.videos
+                                : []
+                        );
+
+
+                if (videos.length === 0) {
+
+                    videoGrid.innerHTML =
+                        '<p style="color:var(--text-lightgray); text-align:center;">No hay videos subidos aún. ¡Sé el primero!</p>';
+
+                    return;
+                }
+
+
+                videoGrid.innerHTML =
+                    videos.map(video => {
+
+                        const streamUrl =
+                            video.stream
+                                ? (
+                                    video.stream.startsWith("http")
+                                        ? video.stream
+                                        : `${SERVER_URL}${video.stream}`
+                                  )
+                                : `${SERVER_URL}/stream/${video.id}`;
+
+
+                        const thumbnailUrl =
+                            video.thumbnail
+                                ? (
+                                    video.thumbnail.startsWith("http")
+                                        ? video.thumbnail
+                                        : `${SERVER_URL}${video.thumbnail}`
+                                  )
+                                : `${SERVER_URL}/stream/${video.id}/thumb`;
+
+
+                        return `
+
+                            <div class="video-item-card">
+
+                                <video
+                                    controls
+                                    preload="metadata"
+                                    poster="${thumbnailUrl}"
+                                >
+
+                                    <source
+                                        src="${streamUrl}"
+                                        type="video/mp4"
+                                    >
+
+                                    Tu navegador no soporta el video.
+
+                                </video>
+
+
+                                <div class="video-info">
+
+                                    <h4>
+                                        ${escapeHtml(video.title)}
+                                    </h4>
+
+
+                                    <p>
+                                        Por:
+                                        ${escapeHtml(video.author)}
+                                    </p>
+
+
+                                    <p>
+                                        Fecha:
+                                        ${escapeHtml(video.date)}
+                                    </p>
+
+                                </div>
+
+                            </div>
+
+                        `;
+                    }).join("");
+
+
+            } catch (error) {
+
+                console.error(
+                    "Error al cargar la galería:",
+                    error
+                );
+
+
+                videoGrid.innerHTML =
+                    '<p class="msg-error" style="text-align:center;">Error al cargar los videos. Comprueba que la API de Smart-Web esté funcionando.</p>';
+            }
+        }
+
+
+        // =========================================================
+        // SUBIR VIDEO
+        // =========================================================
+
+        async function uploadVideo() {
+
+            const vidTitleInput =
+                document.getElementById(
+                    "vid-title"
+                );
+
+
+            const vidFileInput =
+                document.getElementById(
+                    "vid-file"
+                );
+
+
+            const uploadStatus =
+                document.getElementById(
+                    "upload-status"
+                );
+
+
+            const title =
+                vidTitleInput.value.trim();
+
+
+            const file =
+                vidFileInput.files[0];
+
+
+            if (!title || !file) {
+
+                uploadStatus.innerText =
+                    "Por favor, introduce un título y selecciona un archivo de video.";
+
+                uploadStatus.style.color =
+                    "var(--accent-red)";
+
+                return;
+            }
+
+
+            if (!file.name.toLowerCase().endsWith(".mp4")) {
+
+                uploadStatus.innerText =
+                    "El video debe ser un archivo MP4.";
+
+                uploadStatus.style.color =
+                    "var(--accent-red)";
+
+                return;
+            }
+
+
+            if (!token) {
+
+                redirectToKnFoundation();
+
+                return;
+            }
+
+
+            const formData =
+                new FormData();
+
+
+            formData.append(
+                "file",
+                file
+            );
+
+
+            formData.append(
+                "title",
+                title
+            );
+
+
+            uploadStatus.innerText =
+                "Subiendo y procesando video con FFmpeg... Esto puede tardar varios minutos.";
+
+            uploadStatus.style.color =
+                "var(--primary-cian)";
+
+
+            try {
+
+                const response =
+                    await fetch(
+                        `${SERVER_URL}/api/upload`,
+                        {
+                            method: "POST",
+
+                            headers: {
+                                "Authorization":
+                                    `Bearer ${token}`
+                            },
+
+                            body: formData
+                        }
+                    );
+
+
+                if (
+                    response.status === 401 ||
+                    response.status === 403
+                ) {
+
+                    localStorage.removeItem(
+                        TOKEN_KEY
+                    );
+
+                    token = null;
+
+                    redirectToKnFoundation();
+
+                    return;
+                }
+
+
+                const data =
+                    await response.json();
+
+
+                if (
+                    response.ok &&
+                    data.status === "success"
+                ) {
+
+                    uploadStatus.innerText =
+                        "¡Video subido y procesado con éxito!";
+
+                    uploadStatus.style.color =
+                        "var(--accent-green)";
+
+
+                    vidTitleInput.value =
+                        "";
+
+
+                    vidFileInput.value =
+                        "";
+
+
+                    loadVideoGallery();
+
+
+                } else {
+
+                    uploadStatus.innerText =
+                        data.message ||
+                        "Error al subir el video.";
+
+                    uploadStatus.style.color =
+                        "var(--accent-red)";
+                }
+
+
+            } catch (error) {
+
+                console.error(
+                    "Error de red al subir:",
+                    error
+                );
+
+
+                uploadStatus.innerText =
+                    "No se pudo conectar con la API de Smart-Web.";
+
+                uploadStatus.style.color =
+                    "var(--accent-red)";
+            }
+        }
+
+
+        // =========================================================
+        // SEGURIDAD
+        // =========================================================
+
+        function escapeHtml(text) {
+
+            const div =
+                document.createElement("div");
+
+
+            div.textContent =
+                text ?? "";
+
+
+            return div.innerHTML;
+        }
+
+
+        // =========================================================
+        // INICIO
+        // =========================================================
+
+        async function init() {
+
+            if (!token) {
+
+                redirectToKnFoundation();
+
+                return;
+            }
+
+
+            const user =
+                await getCurrentUser();
+
+
+            if (!user) {
+
+                return;
+            }
+
+
+            showMainApp();
+        }
+
+
+        init();
+
+    </script>
+   
+</body>
+</html>

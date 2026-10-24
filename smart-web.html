@@ -309,15 +309,19 @@
         // REDIRECCIÓN A KN FOUNDATION
         // =========================================================
 
-       function redirectToKnFoundation() {
-    const authUrl = new URL(URLS.auth);
+      function redirectToKnFoundation() {
+    const currentUrl = window.location.href;
 
-    authUrl.searchParams.set(
-        "redirect",
-        window.location.href
-    );
+    // Eliminar las barras finales de la URL de autenticación.
+    const authBase = String(URLS.auth || "")
+        .trim()
+        .replace(/\/+$/, "");
 
-    window.location.replace(authUrl.toString());
+    const authUrl = new URL(authBase);
+
+    authUrl.searchParams.set("redirect", currentUrl);
+
+    window.location.replace(authUrl.href);
 }
 
         // =========================================================

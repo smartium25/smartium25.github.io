@@ -9,6 +9,6 @@ const URLS = {
 
   account: "https://titans-latter-opinions-invitations.trycloudflare.com",
 
-  auth: "https://smartium25.github.io/auth/"
+  auth: "https://smartium25.github.io/auth.html/"
 
 };

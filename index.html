@@ -3,491 +3,682 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width,initial-scale=1.0">
-
 <title>Smart Apps</title>
 
+<script>
+// ==========================================================
+// CONFIGURACIÓN  (aquí agregas, quitas o cambias tus apps)
+// ==========================================================
+//
+// Para AGREGAR una app, copia una línea de la lista y cambia sus datos:
+//   name      -> nombre que se muestra
+//   desc      -> descripción corta
+//   tags      -> palabras destacadas, separadas por •
+//   category  -> etiqueta pequeña que se muestra en la tarjeta
+//   icon      -> emoji que se muestra
+//   href      -> enlace de la app
+//   cta       -> texto del botón
+//   featured  -> true = tarjeta grande (solo para la principal)
+
+const APPS = [
+  {
+    name: "Smart-Web",
+    desc: "La plataforma social para compartir y descubrir contenido.",
+    tags: "VIDEOS • AMIGOS • CONTENIDO",
+    category: "Social",
+    icon: "🌐",
+    href: "https://smartium25.github.io/smart-web.html/",
+    cta: "Abrir Smart-Web",
+    featured: true
+  },
+  {
+    name: "Smart-Chat",
+    desc: "Mensajería privada para usuarios de Smart-Web.",
+    tags: "MENSAJES • GRUPOS • PFP",
+    category: "Comunicación",
+    icon: "💬",
+    href: "https://smartium25.github.io/smart-chat/",
+    cta: "Abrir Smart-Chat"
+  },
+  {
+    name: "Smart-Call",
+    desc: "Llamadas privadas con cámara y micrófono.",
+    tags: "VIDEO • AUDIO • PRIVADO",
+    category: "Comunicación",
+    icon: "📞",
+    href: "https://smartium25.github.io/smart-call.html/",
+    cta: "Abrir Smart-Call"
+  },
+  {
+    name: "Smart-Movies",
+    desc: "Películas y series para ver desde Smart-Web.",
+    tags: "PELÍCULAS • SERIES",
+    category: "Entretenimiento",
+    icon: "🎬",
+    href: "https://smartium25.github.io/smart-movies.html/",
+    cta: "Abrir Smart-Movies"
+  },
+  {
+    name: "Account Manager",
+    desc: "Administra tu Smart-Account.",
+    tags: "FOTO • CONTRASEÑA • CUENTA",
+    category: "Cuenta",
+    icon: "🛡️",
+    href: "https://smartium25.github.io/account-manager.html/",
+    cta: "Abrir"
+  }
+];
+
+// Título y pie de página
+const HUB_TITLE = "Smart Apps";
+const FOOTER_TEXT = "Smart-Web";
+
+// Vista inicial: "grid" (tarjetas), "list" (lista) o "compact" (iconos)
+const DEFAULT_VIEW = "grid";
+
+// Nombre con el que se recuerda la vista elegida en el navegador
+const VIEW_KEY = "smartHubView";
+</script>
+
 <style>
+:root{
+    --bg:#0d1117;
+    --surface:#161b22;
+    --surface-2:#1c2128;
+    --border:#30363d;
+    --text:#f0f3f6;
+    --muted:#8b949e;
+    --gold:#ffd700;
+    --gold-2:#ffae00;
+    --blue:#58a6ff;
+}
+
+*{
+    box-sizing:border-box;
+    margin:0;
+    padding:0;
+}
+
+html{
+    scroll-behavior:smooth;
+}
 
 body{
     font-family:'Segoe UI',Tahoma,Geneva,Verdana,sans-serif;
-    background-color:#0d1117;
-    color:white;
-
+    background:var(--bg);
+    color:var(--text);
+    min-height:100vh;
     display:flex;
     flex-direction:column;
     align-items:center;
-    justify-content:center;
-
-    min-height:100vh;
-
-    margin:0;
-
-    text-align:center;
-
     overflow-x:hidden;
 }
 
-.celebration-bg{
+.bg{
     position:fixed;
-
-    top:0;
-    left:0;
-
-    width:100%;
-    height:100%;
-
+    inset:0;
+    z-index:-1;
     background:
-        radial-gradient(
-            circle at center,
-            #161b22 0%,
-            #0d1117 100%
-        );
-
-    z-index:-2;
+        radial-gradient(700px 420px at 50% -8%,rgba(255,215,0,.10),transparent 65%),
+        radial-gradient(600px 400px at 100% 100%,rgba(88,166,255,.07),transparent 60%),
+        radial-gradient(circle at center,#161b22 0%,#0d1117 100%);
 }
 
-.anniversary-header{
-    background:
-        linear-gradient(
-            90deg,
-            #ffd700,
-            #ffffff,
-            #ffd700
-        );
+.wrap{
+    width:min(1180px,100%);
+    padding:34px 20px 20px;
+    flex:1;
+}
 
+/* =========================================================
+   HEADER
+   ========================================================= */
+
+header.top{
+    text-align:center;
+    margin-bottom:26px;
+}
+
+.title{
+    background:linear-gradient(90deg,#ffd700,#ffffff,#ffd700);
     background-size:200% auto;
-
     -webkit-background-clip:text;
+    background-clip:text;
     -webkit-text-fill-color:transparent;
-
     animation:shine 3s linear infinite;
-
     font-size:2.8rem;
-
     font-weight:800;
-
-    margin:20px 0;
+    letter-spacing:-.5px;
 }
 
 @keyframes shine{
-    to{
-        background-position:200% center;
-    }
+    to{background-position:200% center;}
 }
 
-.container{
+/* =========================================================
+   TOOLBAR
+   ========================================================= */
+
+.toolbar{
     display:flex;
-
-    gap:25px;
-
-    flex-wrap:wrap;
-
-    justify-content:center;
-
-    padding:20px;
-
-    max-width:1250px;
+    flex-direction:column;
+    gap:14px;
+    margin-bottom:26px;
 }
 
+.toolbar-row{
+    display:flex;
+    gap:12px;
+    align-items:center;
+    justify-content:center;
+    flex-wrap:wrap;
+}
 
-/* =====================================================
-   TODAS LAS TARJETAS DORADAS
-===================================================== */
+.views{
+    display:flex;
+    gap:4px;
+    padding:4px;
+    border:1px solid var(--border);
+    border-radius:12px;
+    background:var(--surface);
+}
+
+.views button{
+    border:0;
+    background:transparent;
+    color:var(--muted);
+    padding:8px 13px;
+    border-radius:9px;
+    cursor:pointer;
+    font:inherit;
+    font-size:.85rem;
+    font-weight:600;
+    transition:.2s;
+}
+
+.views button:hover{
+    color:var(--text);
+}
+
+.views button.active{
+    background:linear-gradient(45deg,var(--gold),var(--gold-2));
+    color:#000;
+}
+
+/* =========================================================
+   APPS (contenedor)
+   ========================================================= */
+
+.apps{
+    display:grid;
+    grid-template-columns:repeat(auto-fill,minmax(250px,1fr));
+    gap:20px;
+}
+
+/* =========================================================
+   TARJETA
+   ========================================================= */
 
 .card{
-    background:
-        linear-gradient(
-            145deg,
-            #1c2128,
-            #0d1117
-        );
-
-    border:3px solid #ffd700;
-
-    border-radius:16px;
-
-    padding:30px;
-
-    width:280px;
-
-    transition:
-        all .4s
-        cubic-bezier(
-            .175,
-            .885,
-            .32,
-            1.275
-        );
-
-    text-decoration:none;
-
-    color:white;
-
     position:relative;
-
-    box-shadow:
-        0 0 22px
-        rgba(255,215,0,.14);
+    display:flex;
+    flex-direction:column;
+    gap:14px;
+    padding:24px;
+    border-radius:18px;
+    border:2px solid rgba(255,215,0,.45);
+    background:linear-gradient(145deg,var(--surface-2),var(--bg));
+    color:var(--text);
+    text-decoration:none;
+    box-shadow:0 0 22px rgba(255,215,0,.10);
+    transition:transform .3s cubic-bezier(.175,.885,.32,1.275),
+               border-color .3s,
+               box-shadow .3s;
+    animation:rise .4s ease both;
 }
 
-.card:hover{
-    transform:translateY(-15px);
-
-    border-color:#ffe45c;
-
-    box-shadow:
-        0 0 35px
-        rgba(255,215,0,.28);
+@keyframes rise{
+    from{opacity:0;transform:translateY(10px);}
+    to{opacity:1;transform:none;}
 }
 
-
-/* =====================================================
-   TARJETA PRINCIPAL
-===================================================== */
-
-.card-main{
-    width:360px !important;
-
-    box-shadow:
-        0 0 30px
-        rgba(255,215,0,.22);
+.card:hover,
+.card:focus-visible{
+    transform:translateY(-8px);
+    border-color:var(--gold);
+    box-shadow:0 0 34px rgba(255,215,0,.26);
+    outline:0;
 }
 
-.card-main:hover{
-    border-color:#ffd700 !important;
+.icon{
+    width:52px;
+    height:52px;
+    border-radius:14px;
+    display:grid;
+    place-items:center;
+    font-size:26px;
+    flex:none;
+    background:rgba(255,215,0,.10);
+    border:1px solid rgba(255,215,0,.28);
 }
 
-
-/* =====================================================
-   TARJETA ACCOUNT MANAGER
-===================================================== */
-
-.account-manager-card{
-    width:210px;
-
-    padding:20px;
-
-    border-width:2px;
+.body{
+    min-width:0;
+    flex:1;
 }
 
-.account-manager-card h2{
-    font-size:1.05rem;
+.body h2{
+    font-size:1.15rem;
+    margin-bottom:6px;
+}
 
+.body p{
+    color:var(--muted);
+    font-size:.9rem;
+    line-height:1.45;
+}
+
+.tags{
+    margin-top:10px;
+    font-size:.75rem;
+    font-weight:700;
+    color:var(--blue);
+    letter-spacing:.3px;
+}
+
+.cat{
+    position:absolute;
+    top:14px;
+    right:14px;
+    font-size:.7rem;
+    color:var(--muted);
+    border:1px solid var(--border);
+    border-radius:999px;
+    padding:2px 9px;
+}
+
+.cta{
+    align-self:flex-start;
+    display:inline-block;
+    background:linear-gradient(45deg,var(--gold),var(--gold-2));
+    color:#000;
+    padding:9px 18px;
+    border-radius:8px;
+    font-weight:700;
+    font-size:.88rem;
+}
+
+.badge{
+    position:absolute;
+    top:-14px;
+    left:24px;
+    background:var(--gold);
+    color:#000;
+    padding:4px 14px;
+    border-radius:50px;
+    font-size:.75rem;
+    font-weight:800;
+}
+
+/* ---------- Tarjeta principal (vista tarjetas) ---------- */
+
+.apps.grid .card.featured{
+    grid-column:span 2;
+    padding:30px;
+    box-shadow:0 0 30px rgba(255,215,0,.22);
+}
+
+.apps.grid .card.featured .icon{
+    width:64px;
+    height:64px;
+    font-size:32px;
+}
+
+.apps.grid .card.featured .body h2{
+    font-size:1.5rem;
+}
+
+.apps.grid .card.featured .body p{
+    font-size:1rem;
+}
+
+/* =========================================================
+   VISTA LISTA
+   ========================================================= */
+
+.apps.list{
+    grid-template-columns:1fr;
+    gap:14px;
+}
+
+.apps.list .card{
+    flex-direction:row;
+    align-items:center;
+    padding:16px 20px;
+    border-width:1px;
+}
+
+.apps.list .card:hover{
+    transform:translateX(6px);
+}
+
+.apps.list .tags{
+    margin-top:6px;
+}
+
+.apps.list .cta{
+    align-self:center;
+    flex:none;
+}
+
+.apps.list .cat{
+    display:none;
+}
+
+.apps.list .badge{
+    top:-11px;
+    left:68px;
+}
+
+/* =========================================================
+   VISTA COMPACTA (iconos)
+   ========================================================= */
+
+.apps.compact{
+    grid-template-columns:repeat(auto-fill,minmax(130px,1fr));
+    gap:16px;
+}
+
+.apps.compact .card{
+    align-items:center;
+    text-align:center;
+    padding:20px 12px;
+    gap:10px;
+    border-width:1px;
+}
+
+.apps.compact .icon{
+    width:60px;
+    height:60px;
+    font-size:30px;
+}
+
+.apps.compact .body p,
+.apps.compact .tags,
+.apps.compact .cta,
+.apps.compact .cat{
+    display:none;
+}
+
+.apps.compact .body h2{
+    font-size:.95rem;
+    margin:0;
+}
+
+.apps.compact .badge{
+    left:50%;
+    transform:translateX(-50%);
+    font-size:.65rem;
+    padding:2px 10px;
+    top:-10px;
+}
+
+/* =========================================================
+   VACÍO
+   ========================================================= */
+
+.empty{
+    grid-column:1 / -1;
+    text-align:center;
+    color:var(--muted);
+    padding:50px 10px;
+}
+
+.empty b{
+    display:block;
+    font-size:2rem;
     margin-bottom:8px;
 }
 
-.account-manager-card p{
-    margin-bottom:14px;
-}
-
-.account-manager-card .btn-action{
-    padding:8px 16px;
-
-    font-size:.85rem;
-}
-
-.account-manager-card:hover{
-    transform:translateY(-8px);
-}
-
-
-/* =====================================================
-   ETIQUETA
-===================================================== */
-
-.badge-star{
-    background:#ffd700;
-
-    color:#000;
-
-    padding:5px 15px;
-
-    border-radius:50px;
-
-    font-size:.8rem;
-
-    font-weight:bold;
-
-    position:absolute;
-
-    top:-15px;
-
-    left:50%;
-
-    transform:translateX(-50%);
-}
-
-
-/* =====================================================
-   TEXTO DESTACADO
-===================================================== */
-
-.features{
-    font-size:.85rem;
-
-    color:#58a6ff;
-
-    margin-bottom:20px;
-
-    font-weight:bold;
-}
-
-
-/* =====================================================
-   BOTONES
-===================================================== */
-
-.btn-action{
-    display:inline-block;
-
-    background-color:#238636;
-
-    color:white;
-
-    padding:10px 20px;
-
-    border-radius:8px;
-
-    text-decoration:none;
-
-    font-weight:bold;
-}
-
-.btn-gold{
-    background:
-        linear-gradient(
-            45deg,
-            #ffd700,
-            #ffae00
-        );
-
-    color:black;
-}
-
-
-/* =====================================================
+/* =========================================================
    FOOTER
-===================================================== */
+   ========================================================= */
 
 footer{
-    margin-top:60px;
-
-    padding:30px;
-
-    border-top:1px solid #30363d;
-
     width:100%;
-
-    color:#8b949e;
+    margin-top:50px;
+    padding:26px;
+    border-top:1px solid var(--border);
+    color:var(--muted);
+    text-align:center;
+    font-size:.9rem;
 }
 
+/* =========================================================
+   MÓVIL
+   ========================================================= */
 
-/* =====================================================
-   MOVIL
-===================================================== */
+@media(max-width:700px){
 
-@media(max-width:600px){
-
-    .container{
-        flex-direction:column;
-
-        align-items:center;
+    .apps.grid .card.featured{
+        grid-column:auto;
     }
 
-    .card,
-    .card-main{
-        width:min(
-            280px,
-            85vw
-        ) !important;
-
-        transform:none;
-    }
-
-    .account-manager-card{
-        width:210px !important;
-    }
-
-    .anniversary-header{
+    .title{
         font-size:2.2rem;
     }
-
 }
 
-</style>
+@media(max-width:560px){
 
+    .wrap{
+        padding:24px 14px 10px;
+    }
+
+    .apps{
+        grid-template-columns:1fr;
+    }
+
+    .apps.compact{
+        grid-template-columns:repeat(2,1fr);
+    }
+
+    .apps.list .card{
+        flex-wrap:wrap;
+    }
+
+    .apps.list .cta{
+        width:100%;
+        text-align:center;
+    }
+
+    .toolbar-row{
+        flex-direction:column;
+        align-items:stretch;
+    }
+
+    .views{
+        justify-content:space-between;
+    }
+
+    .views button{
+        flex:1;
+    }
+}
+
+@media(prefers-reduced-motion:reduce){
+
+    *{
+        animation:none !important;
+        transition:none !important;
+    }
+}
+</style>
 </head>
 
 <body>
 
-<div class="celebration-bg"></div>
+<div class="bg"></div>
 
-<div class="anniversary-header">
-    Smart Apps
-</div>
+<div class="wrap">
 
+    <header class="top">
+        <h1 class="title" id="hubTitle"></h1>
+    </header>
 
-<div class="container">
+    <div class="toolbar">
 
+        <div class="toolbar-row">
 
-    <!-- SMART-WEB -->
+            <div class="views" role="group" aria-label="Vista">
+                <button type="button" data-view="grid">Tarjetas</button>
+                <button type="button" data-view="list">Lista</button>
+                <button type="button" data-view="compact">Iconos</button>
+            </div>
 
-    <a
-        href="https://smartium25.github.io/smart-web.html/"
-        class="card card-main"
-    >
-
-        <div class="badge-star">
-            PRINCIPAL
         </div>
 
-        <h2>
-            Smart-Web
-        </h2>
+    </div>
 
-        <p style="
-            color:#8b949e;
-            font-size:.95rem;
-            line-height:1.4;
-        ">
-            La plataforma social
-            para compartir y descubrir contenido.
-        </p>
-
-        <div class="features">
-            VIDEOS • AMIGOS • CONTENIDO
-        </div>
-
-        <span class="btn-action btn-gold">
-            Abrir Smart-Web
-        </span>
-
-    </a>
-
-
-    <!-- SMART-CHAT -->
-
-    <a
-        href="https://smartium25.github.io/smart-chat/"
-        class="card"
-    >
-
-        <h2>
-            Smart-Chat
-        </h2>
-
-        <p style="
-            color:#8b949e;
-            font-size:.9rem;
-        ">
-            Mensajería privada para usuarios
-                de Smart-Web.
-        </p>
-
-        <div class="features">
-            MENSAJES • GRUPOS • PFP
-        </div>
-
-        <span class="btn-action btn-gold">
-            Abrir Smart-Chat
-        </span>
-
-    </a>
-
-
-    <!-- SMART-CALL -->
-
-    <a
-        href="https://smartium25.github.io/smart-call.html/"
-        class="card"
-    >
-
-        <h2>
-            Smart-Call
-        </h2>
-
-        <p style="
-            color:#8b949e;
-            font-size:.9rem;
-        ">
-            Llamadas privadas con cámara
-            y micrófono.
-        </p>
-
-        <div class="features">
-            VIDEO • AUDIO • PRIVADO
-        </div>
-
-        <span class="btn-action btn-gold">
-            Abrir Smart-Call
-        </span>
-
-    </a>
-
-
-    <!-- SMART-MOVIES -->
-
-    <a
-        href="https://smartium25.github.io/smart-movies.html/"
-        class="card"
-    >
-
-        <h2>
-            Smart-Movies
-        </h2>
-
-        <p style="
-            color:#8b949e;
-            font-size:.9rem;
-        ">
-            Películas y series para ver
-            desde Smart-web.
-        </p>
-
-        <div class="features">
-            PELÍCULAS • SERIES
-        </div>
-
-        <span class="btn-action btn-gold">
-            Abrir Smart-Movies
-        </span>
-
-    </a>
-
-
-    <!-- KN FOUNDATION ACCOUNT MANAGER -->
-
-    <a
-        href="https://smartium25.github.io/account-manager.html/"
-        class="card account-manager-card"
-    >
-
-        <h2>
-            Account Manager
-        </h2>
-
-        <p style="
-            color:#8b949e;
-            font-size:.8rem;
-            line-height:1.4;
-        ">
-            Administra tu Smart-Account.
-        </p>
-
-        <span class="btn-action btn-gold">
-            Abrir
-        </span>
-
-    </a>
-
+    <main class="apps" id="apps"></main>
 
 </div>
 
+<footer id="footer"></footer>
 
-<footer>
-    Smart-Web
-</footer>
+<script>
 
+const $ = id => document.getElementById(id);
+
+let view = localStorage.getItem(VIEW_KEY) || DEFAULT_VIEW;
+
+if(!["grid", "list", "compact"].includes(view)){
+    view = "grid";
+}
+
+/* =========================================================
+   TEXTOS FIJOS
+   ========================================================= */
+
+$("hubTitle").textContent = HUB_TITLE;
+$("footer").textContent = FOOTER_TEXT;
+
+document.title = HUB_TITLE;
+
+
+/* =========================================================
+   APPS
+   ========================================================= */
+
+function renderApps(){
+
+    const box = $("apps");
+
+    box.className = "apps " + view;
+
+    box.innerHTML = "";
+
+    APPS.forEach((app, index) => {
+
+        const card = document.createElement("a");
+
+        card.className = "card" + (app.featured ? " featured" : "");
+        card.href = app.href;
+        card.style.animationDelay = (index * 0.04) + "s";
+        card.title = app.name;
+
+        if(app.featured){
+
+            const badge = document.createElement("div");
+            badge.className = "badge";
+            badge.textContent = "PRINCIPAL";
+
+            card.appendChild(badge);
+        }
+
+        if(app.category){
+
+            const cat = document.createElement("div");
+            cat.className = "cat";
+            cat.textContent = app.category;
+
+            card.appendChild(cat);
+        }
+
+        const icon = document.createElement("div");
+        icon.className = "icon";
+        icon.textContent = app.icon || "✨";
+
+        const body = document.createElement("div");
+        body.className = "body";
+
+        const name = document.createElement("h2");
+        name.textContent = app.name;
+
+        const desc = document.createElement("p");
+        desc.textContent = app.desc || "";
+
+        body.appendChild(name);
+        body.appendChild(desc);
+
+        if(app.tags){
+
+            const tags = document.createElement("div");
+            tags.className = "tags";
+            tags.textContent = app.tags;
+
+            body.appendChild(tags);
+        }
+
+        const cta = document.createElement("span");
+        cta.className = "cta";
+        cta.textContent = app.cta || "Abrir";
+
+        card.appendChild(icon);
+        card.appendChild(body);
+        card.appendChild(cta);
+
+        box.appendChild(card);
+    });
+}
+
+
+/* =========================================================
+   VISTAS
+   ========================================================= */
+
+function renderViews(){
+
+    document.querySelectorAll(".views button").forEach(button => {
+
+        button.classList.toggle("active", button.dataset.view === view);
+    });
+}
+
+document.querySelectorAll(".views button").forEach(button => {
+
+    button.onclick = () => {
+
+        view = button.dataset.view;
+
+        try{
+            localStorage.setItem(VIEW_KEY, view);
+        }catch(error){}
+
+        renderViews();
+        renderApps();
+    };
+});
+
+
+/* =========================================================
+   INICIO
+   ========================================================= */
+
+renderViews();
+renderApps();
+
+</script>
 
 </body>
 </html>

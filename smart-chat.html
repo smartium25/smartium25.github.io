@@ -1,0 +1,3296 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1.0">
+<title>Smart-Chat · 3PD</title>
+   
+<script src="./url.js"></script>
+
+<script>
+/* ==========================================================
+   CONFIGURACIÓN  (aquí cambias las URLs, los banners y los límites)
+========================================================== */
+
+// Las URLs se cambian en url.js (misma carpeta que este HTML)
+
+// Dirección de esta API (Smart-Chat, el api.py del chat, puerto 8002)
+const API = URLS.chat;
+
+// Dirección de la API de Smart-Account (sirve las fotos de perfil: /pfp/...)
+const KN_AUTH_API = URLS.account;
+
+// Página de inicio de sesión
+const AUTH_URL = URLS.auth;
+
+// Nombre con el que la página de login guarda el token en el navegador
+// (debe ser EXACTAMENTE el mismo que usa tu auth nuevo)
+const TOKEN_KEY =
+  "smart_token";
+
+// Banners (están en la misma carpeta que este HTML)
+const BANNERS = [
+  { name: "Logo Original", file: "banner1.png" },
+  { name: "Logo Moderno", file: "banner2.png" },
+  { name: "I ❤️ Smart-Chat", file: "banner3.png" }
+];
+
+// Oscurecimiento sobre el banner para que el texto se lea (0 = nada, 1 = negro)
+const BANNER_DIM = 0.35;
+
+// Foto personalizada: lado máximo en píxeles y calidad JPEG (0 a 1)
+const CUSTOM_BANNER_MAX_SIDE = 1600;
+const CUSTOM_BANNER_QUALITY = 0.82;
+
+// Prefijo con el que se guarda el banner elegido (uno por usuario)
+const BANNER_STORAGE_PREFIX = "smartchat_banner_";
+
+// Cada cuánto se refresca la lista de usuarios (ms) y reconexión del WebSocket (ms)
+const USERS_REFRESH_MS = 10000;
+const WS_RECONNECT_MS = 3000;
+</script>
+
+<style>
+:root{
+  --bg:#252a33;
+  --panel:#272d37;
+  --card:#303640;
+  --cyan:#00f0ff;
+  --cyan2:#00c8d7;
+  --text:#f5f7fa;
+  --muted:#9aa4b2;
+  --green:#35d06f;
+  --red:#ff5b67;
+  --border:#3b424d;
+}
+
+*{
+  box-sizing:border-box;
+  margin:0;
+  padding:0;
+}
+
+html,
+body{
+  width:100%;
+  height:100%;
+  overflow:hidden;
+}
+
+body{
+  font-family:Segoe UI,Arial,sans-serif;
+  background:var(--bg);
+  color:var(--text);
+}
+
+button,
+input{
+  font:inherit;
+}
+
+button{
+  border:0;
+  cursor:pointer;
+}
+
+/* =========================================================
+   APP
+========================================================= */
+
+.app{
+  width:100%;
+  height:100vh;
+  display:grid;
+  grid-template-columns:minmax(220px,1fr) minmax(420px,1.42fr) minmax(220px,1fr);
+  gap:1px;
+  background:var(--border);
+}
+
+.panel{
+  background:var(--panel);
+  padding:16px;
+  min-width:0;
+  display:flex;
+  flex-direction:column;
+  overflow:hidden;
+}
+
+.title{
+  color:var(--cyan);
+  background:var(--card);
+  border-radius:12px;
+  padding:12px 14px;
+  text-align:center;
+  font-weight:700;
+  margin-bottom:12px;
+}
+
+.title.white{
+  color:var(--text);
+}
+
+.scroll{
+  flex:1;
+  min-height:0;
+  overflow:auto;
+  padding-right:2px;
+}
+
+.scroll::-webkit-scrollbar,
+.chat-messages::-webkit-scrollbar,
+.member-list::-webkit-scrollbar{
+  width:7px;
+}
+
+.scroll::-webkit-scrollbar-thumb,
+.chat-messages::-webkit-scrollbar-thumb,
+.member-list::-webkit-scrollbar-thumb{
+  background:#46505c;
+  border-radius:9px;
+}
+
+/* =========================================================
+   USERS
+========================================================= */
+
+.user-card{
+  background:var(--card);
+  border-radius:12px;
+  margin-bottom:10px;
+  display:flex;
+  align-items:center;
+  gap:10px;
+  padding:10px;
+}
+
+.user-card:hover{
+  background:#353c47;
+}
+
+.user-card img{
+  width:44px;
+  height:44px;
+  border-radius:50%;
+  object-fit:cover;
+  border:2px solid var(--cyan);
+  flex:none;
+  background:#171b21;
+}
+
+.status-dot{
+  width:10px;
+  height:10px;
+  border-radius:50%;
+  flex:none;
+}
+
+.status-dot.online{
+  background:var(--green);
+}
+
+.status-dot.offline{
+  background:#68707b;
+}
+
+.user-name{
+  min-width:0;
+  flex:1;
+  overflow:hidden;
+  text-overflow:ellipsis;
+  white-space:nowrap;
+  font-weight:600;
+}
+
+.chat-btn{
+  background:var(--cyan);
+  color:#081013;
+  font-weight:700;
+  border-radius:9px;
+  padding:9px 11px;
+}
+
+.chat-btn:hover,
+.primary-btn:hover{
+  background:#5ff6ff;
+}
+
+/* =========================================================
+   CENTER
+========================================================= */
+
+.center{
+  background:#21262e;
+  background-size:cover;
+  background-position:center;
+  background-repeat:no-repeat;
+  min-width:0;
+  display:flex;
+  flex-direction:column;
+  overflow:hidden;
+}
+
+/* =========================================================
+   PROFILE
+========================================================= */
+
+#profile{
+  height:100%;
+  display:flex;
+  flex-direction:column;
+  align-items:center;
+  justify-content:center;
+  padding:28px;
+  text-align:center;
+}
+
+.big-pfp{
+  width:150px;
+  height:150px;
+  border-radius:50%;
+  object-fit:cover;
+  border:3px solid var(--cyan);
+  background:#171b21;
+  margin-bottom:18px;
+}
+
+.profile-name{
+  font-size:22px;
+  font-weight:700;
+  margin-bottom:16px;
+}
+
+.profile-sub{
+  color:var(--muted);
+  font-size:14px;
+}
+
+.logout-btn{
+  margin-top:18px;
+  background:#454c57;
+  color:#fff;
+  border-radius:9px;
+  padding:10px 18px;
+  font-weight:700;
+}
+
+.logout-btn:hover{
+  background:#515a66;
+}
+
+.banner-open-btn{
+  margin-top:10px;
+  background:#454c57;
+  color:#fff;
+  border-radius:9px;
+  padding:10px 18px;
+  font-weight:700;
+}
+
+.banner-open-btn:hover{
+  background:#515a66;
+}
+
+/* =========================================================
+   CHAT
+========================================================= */
+
+#chat{
+  display:none;
+  width:100%;
+  height:100%;
+  flex-direction:column;
+  min-height:0;
+}
+
+.chat-head{
+  padding:13px 15px;
+  background:var(--card);
+  color:var(--cyan);
+  font-weight:700;
+  display:flex;
+  align-items:center;
+  gap:10px;
+  flex:none;
+}
+
+.chat-head img{
+  width:38px;
+  height:38px;
+  border-radius:50%;
+  object-fit:cover;
+  border:2px solid var(--cyan);
+  background:#171b21;
+  flex:none;
+}
+
+.chat-head-text{
+  min-width:0;
+}
+
+.chat-head-title{
+  overflow:hidden;
+  text-overflow:ellipsis;
+  white-space:nowrap;
+}
+
+.chat-head-sub{
+  color:var(--muted);
+  font-size:12px;
+  margin-top:3px;
+  font-weight:400;
+}
+
+.chat-messages{
+  flex:1;
+  min-height:0;
+  overflow:auto;
+  display:flex;
+  flex-direction:column;
+  gap:10px;
+  padding:14px;
+}
+
+.message{
+  max-width:76%;
+  background:var(--card);
+  border-radius:12px;
+  padding:9px 11px;
+  font-size:13px;
+  line-height:1.4;
+  align-self:flex-start;
+  word-break:break-word;
+}
+
+.message.mine{
+  align-self:flex-end;
+  background:#0a4047;
+  border:1px solid rgba(0,240,255,.25);
+}
+
+.message-sender{
+  color:var(--cyan);
+  font-size:11px;
+  font-weight:700;
+  margin-bottom:4px;
+}
+
+.message-meta{
+  color:var(--muted);
+  font-size:10px;
+  margin-top:5px;
+}
+
+.media{
+  display:block;
+  width:auto;
+  max-width:100%;
+  max-height:300px;
+  border-radius:9px;
+  margin-top:6px;
+}
+
+.chat-compose{
+  display:flex;
+  align-items:center;
+  gap:9px;
+  padding:12px 14px;
+  background:var(--card);
+  flex:none;
+}
+
+.chat-compose input{
+  width:100%;
+  min-width:0;
+  margin:0;
+  background:#1e232b;
+  color:var(--text);
+  border:1px solid #434b56;
+  border-radius:9px;
+  padding:11px 12px;
+  outline:none;
+}
+
+.chat-compose input:focus{
+  border-color:var(--cyan);
+}
+
+.chat-compose input::placeholder{
+  color:var(--muted);
+}
+
+.file-btn{
+  background:#454c57;
+  color:#fff;
+  border-radius:9px;
+  width:42px;
+  height:42px;
+  flex:none;
+}
+
+.file-btn:hover{
+  background:#515a66;
+}
+
+.send-btn{
+  background:var(--cyan);
+  color:#081013;
+  font-weight:700;
+  border-radius:9px;
+  padding:10px 14px;
+  flex:none;
+}
+
+.send-btn:hover{
+  background:#5ff6ff;
+}
+
+/* =========================================================
+   RIGHT
+========================================================= */
+
+input{
+  width:100%;
+  background:#1e232b;
+  color:var(--text);
+  border:1px solid #434b56;
+  border-radius:9px;
+  padding:11px 12px;
+  outline:none;
+  margin-bottom:9px;
+}
+
+input:focus{
+  border-color:var(--cyan);
+}
+
+.primary-btn{
+  background:var(--cyan);
+  color:#081013;
+  font-weight:700;
+  border-radius:9px;
+  padding:9px 11px;
+}
+
+.full{
+  width:100%;
+}
+
+.member-list{
+  flex:0 0 auto;
+  max-height:32vh;
+  overflow:auto;
+  margin-bottom:10px;
+}
+
+.member-card{
+  background:var(--card);
+  border-radius:12px;
+  margin-bottom:8px;
+  display:flex;
+  align-items:center;
+  gap:9px;
+  padding:8px;
+}
+
+.member-card:hover{
+  background:#353c47;
+}
+
+.member-card img{
+  width:38px;
+  height:38px;
+  border-radius:50%;
+  object-fit:cover;
+  border:2px solid var(--cyan);
+  background:#171b21;
+  flex:none;
+}
+
+.member-name{
+  min-width:0;
+  flex:1;
+  overflow:hidden;
+  text-overflow:ellipsis;
+  white-space:nowrap;
+  font-size:12px;
+  font-weight:600;
+}
+
+.member-card input{
+  width:16px;
+  height:16px;
+  margin:0;
+  accent-color:var(--cyan);
+}
+
+.groups-title{
+  margin-top:14px;
+}
+
+.group-card{
+  background:var(--card);
+  border-radius:12px;
+  margin-bottom:10px;
+  padding:11px 86px 11px 12px;
+  min-height:66px;
+  position:relative;
+  display:flex;
+  align-items:center;
+}
+
+.group-card:hover{
+  background:#353c47;
+}
+
+.group-info{
+  width:100%;
+  min-width:0;
+}
+
+.group-name{
+  font-weight:700;
+  overflow:hidden;
+  text-overflow:ellipsis;
+  white-space:nowrap;
+}
+
+.group-sub{
+  margin-top:4px;
+  font-size:12px;
+  color:var(--muted);
+  overflow:hidden;
+  text-overflow:ellipsis;
+  white-space:nowrap;
+}
+
+.group-card .chat-btn{
+  position:absolute;
+  right:10px;
+  top:50%;
+  transform:translateY(-50%);
+}
+
+.empty{
+  color:var(--muted);
+  font-size:13px;
+  padding:8px 2px;
+  text-align:center;
+}
+
+/* =========================================================
+   ERROR / STATUS
+========================================================= */
+
+.chat-error{
+  display:none;
+  margin:12px 14px 0;
+  padding:10px 12px;
+  border-radius:10px;
+  background:#3b2428;
+  color:#ffafb5;
+  border:1px solid #70434a;
+  font-size:13px;
+  flex:none;
+}
+
+.status-message{
+  position:absolute;
+  left:14px;
+  bottom:7px;
+  color:#777d86;
+  font-size:10px;
+  max-width:60%;
+  overflow:hidden;
+  text-overflow:ellipsis;
+  white-space:nowrap;
+}
+
+.toast{
+  position:fixed;
+  left:50%;
+  bottom:18px;
+  transform:translateX(-50%);
+  background:#1d2128;
+  border:1px solid #414954;
+  color:#fff;
+  padding:9px 13px;
+  border-radius:9px;
+  font-size:12px;
+  display:none;
+  z-index:20;
+}
+
+.toast.show{
+  display:block;
+}
+
+/* =========================================================
+   BANNERS (tarjeta de selección)
+========================================================= */
+
+.modal{
+  position:fixed;
+  inset:0;
+  background:rgba(10,12,16,.72);
+  display:none;
+  align-items:center;
+  justify-content:center;
+  padding:16px;
+  z-index:30;
+}
+
+.modal.show{
+  display:flex;
+}
+
+.modal-card{
+  width:100%;
+  max-width:560px;
+  max-height:92vh;
+  overflow:auto;
+  background:var(--panel);
+  border:1px solid var(--border);
+  border-radius:14px;
+  padding:16px;
+}
+
+.banner-grid{
+  display:grid;
+  grid-template-columns:repeat(auto-fill,minmax(150px,1fr));
+  gap:10px;
+  margin-bottom:14px;
+}
+
+.banner-opt{
+  background:var(--card);
+  border:2px solid transparent;
+  border-radius:12px;
+  padding:6px;
+  color:var(--text);
+  text-align:center;
+  font-size:12px;
+  font-weight:600;
+}
+
+.banner-opt:hover{
+  background:#353c47;
+}
+
+.banner-opt.active{
+  border-color:var(--cyan);
+}
+
+.banner-opt img,
+.banner-opt .banner-none{
+  display:block;
+  width:100%;
+  height:80px;
+  object-fit:cover;
+  border-radius:8px;
+  margin-bottom:6px;
+  background:#21262e;
+}
+
+.banner-opt .banner-none{
+  display:flex;
+  align-items:center;
+  justify-content:center;
+  color:var(--muted);
+  font-size:11px;
+}
+
+.banner-actions{
+  display:flex;
+  gap:9px;
+  flex-wrap:wrap;
+}
+
+.banner-actions button{
+  flex:1;
+  min-width:120px;
+}
+
+.secondary-btn{
+  background:#454c57;
+  color:#fff;
+  font-weight:700;
+  border-radius:9px;
+  padding:10px 14px;
+}
+
+.secondary-btn:hover{
+  background:#515a66;
+}
+
+/* =========================================================
+   RESPONSIVE
+========================================================= */
+
+@media(max-width:900px){
+  .app{
+    grid-template-columns:220px 1fr;
+  }
+
+  .app>.panel:last-child{
+    display:none;
+  }
+}
+
+@media(max-width:600px){
+  .app{
+    grid-template-columns:1fr;
+  }
+
+  .app>.panel:first-child{
+    display:none;
+  }
+
+  .center{
+    height:100vh;
+  }
+}
+</style>
+</head>
+
+<body>
+
+<div class="app" id="app" style="display:none;">
+
+  <!-- LEFT -->
+
+  <aside class="panel">
+
+    <div class="title">
+      Usuarios
+    </div>
+
+    <div
+      class="scroll"
+      id="users"
+    ></div>
+
+  </aside>
+
+  <!-- CENTER -->
+
+  <main class="center" id="center">
+
+    <section id="profile">
+
+      <img
+        id="mypfp"
+        class="big-pfp"
+        src="https://via.placeholder.com/150"
+        alt="Foto de perfil"
+      >
+
+      <div
+        id="me"
+        class="profile-name"
+      ></div>
+
+      <div class="profile-sub">
+        Selecciona a alguien para iniciar un chat
+      </div>
+
+      <button
+        class="logout-btn"
+        onclick="logout()"
+      >
+        LOG OUT
+      </button>
+
+      <button
+        id="bannerOpenBtn"
+        class="banner-open-btn"
+        type="button"
+      >
+        🎨 BANNER
+      </button>
+
+    </section>
+
+
+    <section id="chat">
+
+      <div class="chat-head">
+
+        <img
+          id="chatPfp"
+          src="https://via.placeholder.com/44"
+          alt="Foto"
+        >
+
+        <div class="chat-head-text">
+
+          <div
+            id="chatTitle"
+            class="chat-head-title"
+          >
+            Chat
+          </div>
+
+          <div
+            id="chatSub"
+            class="chat-head-sub"
+          >
+            Chat privado
+          </div>
+
+        </div>
+
+      </div>
+
+
+      <div
+        id="chatError"
+        class="chat-error"
+      ></div>
+
+
+      <div
+        id="messages"
+        class="chat-messages"
+      ></div>
+
+
+      <div class="chat-compose">
+
+        <button
+          id="fileBtn"
+          class="file-btn"
+          title="Adjuntar archivo"
+          type="button"
+        >
+          📎
+        </button>
+
+        <input
+          id="fileInput"
+          type="file"
+          hidden
+          accept="image/*,video/*"
+        >
+
+        <input
+          id="message"
+          type="text"
+          placeholder="Escribe un mensaje..."
+          autocomplete="off"
+        >
+
+        <button
+          id="sendBtn"
+          class="send-btn"
+          type="button"
+        >
+          Enviar
+        </button>
+
+      </div>
+
+    </section>
+
+
+    <div
+      id="statusMessage"
+      class="status-message"
+    ></div>
+
+  </main>
+
+  <!-- RIGHT -->
+
+  <aside class="panel">
+
+    <div class="title">
+      Crear Grupo
+    </div>
+
+    <input
+      id="groupName"
+      placeholder="Nombre grupo"
+      maxlength="80"
+      autocomplete="off"
+    >
+
+    <div
+      id="membersList"
+      class="member-list"
+    ></div>
+
+    <button
+      id="createGroupBtn"
+      class="primary-btn full"
+      type="button"
+    >
+      Crear Grupo
+    </button>
+
+
+    <div class="title groups-title white">
+      Mis Grupos
+    </div>
+
+    <div
+      id="groupsList"
+      class="scroll"
+    ></div>
+
+  </aside>
+
+</div>
+
+
+<!-- TARJETA DE BANNERS -->
+
+<div id="bannerModal" class="modal">
+
+  <div class="modal-card">
+
+    <div class="title">
+      Elige tu banner
+    </div>
+
+    <div id="bannerGrid" class="banner-grid"></div>
+
+    <input
+      id="bannerFileInput"
+      type="file"
+      accept="image/*"
+      hidden
+    >
+
+    <div class="banner-actions">
+
+      <button
+        id="bannerUploadBtn"
+        class="primary-btn"
+        type="button"
+      >
+        📷 Subir mi foto
+      </button>
+
+      <button
+        id="bannerCloseBtn"
+        class="secondary-btn"
+        type="button"
+      >
+        Cerrar
+      </button>
+
+    </div>
+
+  </div>
+
+</div>
+
+
+<div
+  id="toast"
+  class="toast"
+></div>
+
+
+<script>
+/* ============================================================
+   ESTADO
+============================================================ */
+
+let TOKEN =
+  localStorage.getItem(
+    TOKEN_KEY
+  ) || "";
+
+let ME = null;
+
+let currentTarget = "";
+let currentType = "";
+
+let ws = null;
+
+let usersCache = [];
+
+let toastTimer = null;
+let reconnectTimer = null;
+let redirecting = false;
+
+
+/* ============================================================
+   UTILIDADES
+============================================================ */
+
+function authHeaders(){
+
+  return {
+    "Authorization":
+      `Smart-Token ${TOKEN}`
+  };
+}
+
+
+function pfpUrl(value){
+
+  if(!value){
+    return "https://via.placeholder.com/44";
+  }
+
+  if(
+    value.startsWith("http://") ||
+    value.startsWith("https://")
+  ){
+    return value;
+  }
+
+  if(
+    value.startsWith("/pfp/")
+  ){
+    return KN_AUTH_API + value;
+  }
+
+  return KN_AUTH_API +
+    (
+      value.startsWith("/")
+        ? value
+        : "/" + value
+    );
+}
+
+
+function showToast(message){
+
+  const box =
+    document.getElementById(
+      "toast"
+    );
+
+  box.textContent =
+    message || "Ocurrió un error.";
+
+  box.classList.add("show");
+
+  clearTimeout(
+    toastTimer
+  );
+
+  toastTimer =
+    setTimeout(
+      () => {
+        box.classList.remove(
+          "show"
+        );
+      },
+      2800
+    );
+}
+
+
+function showChatError(message){
+
+  const box =
+    document.getElementById(
+      "chatError"
+    );
+
+  box.textContent =
+    message || "Ocurrió un error.";
+
+  box.style.display =
+    "block";
+}
+
+
+function hideChatError(){
+
+  const box =
+    document.getElementById(
+      "chatError"
+    );
+
+  box.textContent =
+    "";
+
+  box.style.display =
+    "none";
+}
+
+
+function fallbackImage(
+  img,
+  size = 44
+){
+
+  img.onerror =
+    () => {
+
+      img.onerror =
+        null;
+
+      img.src =
+        "https://via.placeholder.com/" +
+        size;
+    };
+}
+
+
+/* ============================================================
+   AUTH REDIRECT
+============================================================ */
+
+function goAuth(){
+
+  if(redirecting){
+    return;
+  }
+
+  redirecting =
+    true;
+
+  const returnUrl =
+    window.location.href;
+
+  window.location.replace(
+    AUTH_URL +
+    "?redirect=" +
+    encodeURIComponent(
+      returnUrl
+    )
+  );
+}
+
+
+/* ============================================================
+   AUTH
+============================================================ */
+
+async function loadMe(){
+
+  if(!TOKEN){
+
+    goAuth();
+
+    return false;
+  }
+
+
+  try{
+
+    const response =
+      await fetch(
+        `${API}/api/me`,
+        {
+          headers:
+            authHeaders()
+        }
+      );
+
+
+    if(
+      response.status === 401 ||
+      response.status === 403
+    ){
+
+      localStorage.removeItem(
+        TOKEN_KEY
+      );
+
+      TOKEN =
+        "";
+
+      goAuth();
+
+      return false;
+    }
+
+
+    if(!response.ok){
+
+      showChatError(
+        "No se pudo verificar la sesión."
+      );
+
+      return false;
+    }
+
+
+    const data =
+      await response.json();
+
+
+    ME =
+      data.user ||
+      data;
+
+
+    if(
+      !ME ||
+      !ME.username
+    ){
+
+      goAuth();
+
+      return false;
+    }
+
+
+    document.getElementById(
+      "me"
+    ).textContent =
+      "@" + ME.username;
+
+
+    const myPfp =
+      pfpUrl(
+        ME.pfp ||
+        ME.profile_picture
+      );
+
+
+    document.getElementById(
+      "mypfp"
+    ).src =
+      myPfp;
+
+
+    fallbackImage(
+      document.getElementById(
+        "mypfp"
+      ),
+      150
+    );
+
+
+    return true;
+
+  }catch(error){
+
+    console.error(
+      error
+    );
+
+    showChatError(
+      "No se pudo conectar con Smart-Chat."
+    );
+
+    return false;
+  }
+}
+
+
+/* ============================================================
+   USERS
+============================================================ */
+
+async function loadUsers(){
+
+  try{
+
+    const response =
+      await fetch(
+        `${API}/api/users/list/` +
+        encodeURIComponent(
+          ME.username
+        ),
+        {
+          headers:
+            authHeaders()
+        }
+      );
+
+
+    if(
+      response.status === 401 ||
+      response.status === 403
+    ){
+
+      localStorage.removeItem(
+        TOKEN_KEY
+      );
+
+      TOKEN =
+        "";
+
+      goAuth();
+
+      return;
+    }
+
+
+    if(!response.ok){
+
+      throw new Error(
+        "Error cargando usuarios."
+      );
+    }
+
+
+    const data =
+      await response.json();
+
+
+    const list =
+      Array.isArray(data)
+        ? data
+        : (
+          data.users ||
+          []
+        );
+
+
+    usersCache =
+      list.filter(
+        user =>
+          user &&
+          user.username &&
+          user.username !==
+            ME.username
+      );
+
+
+    const box =
+      document.getElementById(
+        "users"
+      );
+
+
+    const members =
+      document.getElementById(
+        "membersList"
+      );
+
+
+    box.innerHTML =
+      "";
+
+    members.innerHTML =
+      "";
+
+
+    if(!usersCache.length){
+
+      box.innerHTML =
+        '<div class="empty">No hay otros usuarios.</div>';
+
+      members.innerHTML =
+        '<div class="empty">No hay usuarios.</div>';
+
+      return;
+    }
+
+
+    usersCache.forEach(
+      user => {
+
+        /* USER CARD */
+
+        const card =
+          document.createElement(
+            "div"
+          );
+
+        card.className =
+          "user-card";
+
+
+        const img =
+          document.createElement(
+            "img"
+          );
+
+        img.src =
+          pfpUrl(
+            user.pfp ||
+            user.profile_picture
+          );
+
+        fallbackImage(
+          img,
+          44
+        );
+
+
+        const dot =
+          document.createElement(
+            "div"
+          );
+
+        dot.className =
+          "status-dot " +
+          (
+            user.online
+              ? "online"
+              : "offline"
+          );
+
+
+        const name =
+          document.createElement(
+            "div"
+          );
+
+        name.className =
+          "user-name";
+
+        name.textContent =
+          "@" + user.username;
+
+
+        const button =
+          document.createElement(
+            "button"
+          );
+
+        button.className =
+          "chat-btn";
+
+        button.textContent =
+          "Chat";
+
+        button.onclick =
+          () =>
+            openPrivate(
+              user.username
+            );
+
+
+        card.append(
+          img,
+          dot,
+          name,
+          button
+        );
+
+
+        box.appendChild(
+          card
+        );
+
+
+        /* MEMBER CARD */
+
+        const member =
+          document.createElement(
+            "label"
+          );
+
+        member.className =
+          "member-card";
+
+
+        const memberImg =
+          document.createElement(
+            "img"
+          );
+
+        memberImg.src =
+          pfpUrl(
+            user.pfp ||
+            user.profile_picture
+          );
+
+        fallbackImage(
+          memberImg,
+          38
+        );
+
+
+        const memberName =
+          document.createElement(
+            "div"
+          );
+
+        memberName.className =
+          "member-name";
+
+        memberName.textContent =
+          "@" + user.username;
+
+
+        const checkbox =
+          document.createElement(
+            "input"
+          );
+
+        checkbox.type =
+          "checkbox";
+
+        checkbox.value =
+          user.username;
+
+
+        member.append(
+          memberImg,
+          memberName,
+          checkbox
+        );
+
+
+        members.appendChild(
+          member
+        );
+      }
+    );
+
+  }catch(error){
+
+    console.error(
+      error
+    );
+
+    document.getElementById(
+      "users"
+    ).innerHTML =
+      '<div class="empty">No se pudieron cargar los usuarios.</div>';
+
+    document.getElementById(
+      "membersList"
+    ).innerHTML =
+      '<div class="empty">No se pudieron cargar los usuarios.</div>';
+  }
+}
+
+
+/* ============================================================
+   PRIVATE CHAT
+============================================================ */
+
+function openPrivate(
+  username
+){
+
+  currentTarget =
+    username;
+
+  currentType =
+    "private";
+
+
+  document.getElementById(
+    "profile"
+  ).style.display =
+    "none";
+
+
+  document.getElementById(
+    "chat"
+  ).style.display =
+    "flex";
+
+
+  const user =
+    usersCache.find(
+      item =>
+        item.username ===
+        username
+    );
+
+
+  document.getElementById(
+    "chatTitle"
+  ).textContent =
+    "@" + username;
+
+
+  document.getElementById(
+    "chatSub"
+  ).textContent =
+    user?.online
+      ? "En línea"
+      : "Desconectado";
+
+
+  document.getElementById(
+    "chatPfp"
+  ).src =
+    pfpUrl(
+      user?.pfp ||
+      user?.profile_picture
+    );
+
+
+  fallbackImage(
+    document.getElementById(
+      "chatPfp"
+    ),
+    44
+  );
+
+
+  hideChatError();
+
+  loadMessages();
+}
+
+
+/* ============================================================
+   GROUP CHAT
+============================================================ */
+
+function openGroup(
+  groupName
+){
+
+  currentTarget =
+    groupName;
+
+  currentType =
+    "group";
+
+
+  document.getElementById(
+    "profile"
+  ).style.display =
+    "none";
+
+
+  document.getElementById(
+    "chat"
+  ).style.display =
+    "flex";
+
+
+  document.getElementById(
+    "chatTitle"
+  ).textContent =
+    groupName;
+
+
+  document.getElementById(
+    "chatSub"
+  ).textContent =
+    "Grupo";
+
+
+  document.getElementById(
+    "chatPfp"
+  ).src =
+    "https://via.placeholder.com/44";
+
+
+  hideChatError();
+
+  loadMessages();
+}
+
+
+/* ============================================================
+   MESSAGES
+============================================================ */
+
+async function loadMessages(){
+
+  if(!currentTarget){
+    return;
+  }
+
+
+  const box =
+    document.getElementById(
+      "messages"
+    );
+
+
+  box.innerHTML =
+    '<div class="empty">Cargando...</div>';
+
+
+  const path =
+    currentType === "group"
+
+      ? `/api/groups/get/${encodeURIComponent(ME.username)}/${encodeURIComponent(currentTarget)}`
+
+      : `/api/chat/get/${encodeURIComponent(ME.username)}/${encodeURIComponent(currentTarget)}`;
+
+
+  try{
+
+    const response =
+      await fetch(
+        API + path,
+        {
+          headers:
+            authHeaders()
+        }
+      );
+
+
+    if(
+      response.status === 401 ||
+      response.status === 403
+    ){
+
+      localStorage.removeItem(
+        TOKEN_KEY
+      );
+
+      TOKEN =
+        "";
+
+      goAuth();
+
+      return;
+    }
+
+
+    if(!response.ok){
+
+      throw new Error(
+        "No se pudieron cargar los mensajes."
+      );
+    }
+
+
+    const data =
+      await response.json();
+
+
+    const messages =
+      Array.isArray(data)
+        ? data
+        : (
+          data.messages ||
+          []
+        );
+
+
+    renderMessages(
+      messages
+    );
+
+  }catch(error){
+
+    console.error(
+      error
+    );
+
+    box.innerHTML =
+      '<div class="empty">No se pudieron cargar los mensajes.</div>';
+  }
+}
+
+
+function renderMessages(
+  list
+){
+
+  const box =
+    document.getElementById(
+      "messages"
+    );
+
+
+  box.innerHTML =
+    "";
+
+
+  if(!list.length){
+
+    box.innerHTML =
+      '<div class="empty">No hay mensajes todavía.</div>';
+
+    return;
+  }
+
+
+  list.forEach(
+    message => {
+
+      const wrapper =
+        document.createElement(
+          "div"
+        );
+
+
+      wrapper.className =
+        "message" +
+        (
+          message.sender ===
+          ME.username
+            ? " mine"
+            : ""
+        );
+
+
+      if(
+        currentType ===
+        "group" &&
+        message.sender &&
+        message.sender !==
+          ME.username
+      ){
+
+        const sender =
+          document.createElement(
+            "div"
+          );
+
+        sender.className =
+          "message-sender";
+
+        sender.textContent =
+          "@" + message.sender;
+
+        wrapper.appendChild(
+          sender
+        );
+      }
+
+
+      if(
+        message.message
+      ){
+
+        const text =
+          document.createElement(
+            "div"
+          );
+
+        text.textContent =
+          message.message;
+
+        wrapper.appendChild(
+          text
+        );
+      }
+
+
+      if(
+        message.file
+      ){
+
+        const url =
+          API +
+          "/media/chat/" +
+          encodeURIComponent(
+            message.file
+          );
+
+
+        if(
+          message.type ===
+          "image"
+        ){
+
+          const img =
+            document.createElement(
+              "img"
+            );
+
+          img.src =
+            url;
+
+          img.className =
+            "media";
+
+          img.alt =
+            "Imagen";
+
+          wrapper.appendChild(
+            img
+          );
+
+        }else if(
+          message.type ===
+          "video"
+        ){
+
+          const video =
+            document.createElement(
+              "video"
+            );
+
+          video.src =
+            url;
+
+          video.controls =
+            true;
+
+          video.playsInline =
+            true;
+
+          video.className =
+            "media";
+
+          wrapper.appendChild(
+            video
+          );
+        }
+      }
+
+
+      const meta =
+        document.createElement(
+          "div"
+        );
+
+      meta.className =
+        "message-meta";
+
+      meta.textContent =
+        message.date ||
+        "";
+
+      wrapper.appendChild(
+        meta
+      );
+
+
+      box.appendChild(
+        wrapper
+      );
+    }
+  );
+
+
+  box.scrollTop =
+    box.scrollHeight;
+}
+
+
+/* ============================================================
+   SEND MESSAGE
+============================================================ */
+
+async function sendMessage(){
+
+  const input =
+    document.getElementById(
+      "message"
+    );
+
+
+  const text =
+    input.value.trim();
+
+
+  if(
+    !currentTarget ||
+    !text
+  ){
+    return;
+  }
+
+
+  try{
+
+    const path =
+      currentType === "group"
+        ? "/api/groups/send"
+        : "/api/chat/send";
+
+
+    /*
+      Formato que espera el api.py del chat:
+      PrivateSend {receiver, message} / GroupSend {group, message}
+    */
+
+    const body =
+      currentType === "group"
+
+        ? {
+            group: currentTarget,
+            message: text
+          }
+
+        : {
+            receiver: currentTarget,
+            message: text
+          };
+
+
+    const response =
+      await fetch(
+        API + path,
+        {
+          method:"POST",
+
+          headers:{
+            ...authHeaders(),
+            "Content-Type":
+              "application/json"
+          },
+
+          body:
+            JSON.stringify(
+              body
+            )
+        }
+      );
+
+
+    if(
+      response.status === 401 ||
+      response.status === 403
+    ){
+
+      localStorage.removeItem(
+        TOKEN_KEY
+      );
+
+      TOKEN =
+        "";
+
+      goAuth();
+
+      return;
+    }
+
+
+    if(!response.ok){
+
+      const data =
+        await response.json()
+          .catch(
+            () => ({})
+          );
+
+      throw new Error(
+        data.detail ||
+        "No se pudo enviar el mensaje."
+      );
+    }
+
+
+    input.value =
+      "";
+
+
+    await loadMessages();
+
+  }catch(error){
+
+    showToast(
+      error.message
+    );
+  }
+}
+
+
+/* ============================================================
+   FILE UPLOAD
+============================================================ */
+
+async function sendFile(
+  file
+){
+
+  if(
+    !currentTarget ||
+    !file
+  ){
+    return;
+  }
+
+
+  const form =
+    new FormData();
+
+
+  form.append(
+    "receiver",
+    currentTarget
+  );
+
+
+  form.append(
+    "file",
+    file
+  );
+
+
+  const path =
+    currentType === "group"
+
+      ? "/api/groups/upload"
+
+      : "/api/chat/upload";
+
+
+  try{
+
+    const response =
+      await fetch(
+        API + path,
+        {
+          method:"POST",
+
+          headers:
+            authHeaders(),
+
+          body:
+            form
+        }
+      );
+
+
+    if(
+      response.status === 401 ||
+      response.status === 403
+    ){
+
+      localStorage.removeItem(
+        TOKEN_KEY
+      );
+
+      TOKEN =
+        "";
+
+      goAuth();
+
+      return;
+    }
+
+
+    if(!response.ok){
+
+      const data =
+        await response.json()
+          .catch(
+            () => ({})
+          );
+
+      throw new Error(
+        data.detail ||
+        "No se pudo subir el archivo."
+      );
+    }
+
+
+    await loadMessages();
+
+  }catch(error){
+
+    showToast(
+      error.message
+    );
+  }
+}
+
+
+/* ============================================================
+   GROUPS
+============================================================ */
+
+async function loadGroups(){
+
+  try{
+
+    const response =
+      await fetch(
+        `${API}/api/groups/list/` +
+        encodeURIComponent(
+          ME.username
+        ),
+        {
+          headers:
+            authHeaders()
+        }
+      );
+
+
+    if(
+      response.status === 401 ||
+      response.status === 403
+    ){
+
+      localStorage.removeItem(
+        TOKEN_KEY
+      );
+
+      TOKEN =
+        "";
+
+      goAuth();
+
+      return;
+    }
+
+
+    if(!response.ok){
+
+      throw new Error(
+        "Error cargando grupos."
+      );
+    }
+
+
+    const data =
+      await response.json();
+
+
+    const groups =
+      Array.isArray(data)
+        ? data
+        : (
+          data.groups ||
+          []
+        );
+
+
+    const box =
+      document.getElementById(
+        "groupsList"
+      );
+
+
+    box.innerHTML =
+      "";
+
+
+    if(!groups.length){
+
+      box.innerHTML =
+        '<div class="empty">No estás en ningún grupo.</div>';
+
+      return;
+    }
+
+
+    groups.forEach(
+      group => {
+
+        const card =
+          document.createElement(
+            "div"
+          );
+
+        card.className =
+          "group-card";
+
+
+        const info =
+          document.createElement(
+            "div"
+          );
+
+        info.className =
+          "group-info";
+
+
+        const name =
+          document.createElement(
+            "div"
+          );
+
+        name.className =
+          "group-name";
+
+        name.textContent =
+          group.name;
+
+
+        const sub =
+          document.createElement(
+            "div"
+          );
+
+        sub.className =
+          "group-sub";
+
+        sub.textContent =
+          "Grupo";
+
+
+        info.append(
+          name,
+          sub
+        );
+
+
+        const button =
+          document.createElement(
+            "button"
+          );
+
+        button.className =
+          "chat-btn";
+
+        button.textContent =
+          "Chat";
+
+        button.onclick =
+          () =>
+            openGroup(
+              group.name
+            );
+
+
+        card.append(
+          info,
+          button
+        );
+
+
+        box.appendChild(
+          card
+        );
+      }
+    );
+
+  }catch(error){
+
+    console.error(
+      error
+    );
+
+    document.getElementById(
+      "groupsList"
+    ).innerHTML =
+      '<div class="empty">No se pudieron cargar los grupos.</div>';
+  }
+}
+
+
+async function createGroup(){
+
+  const input =
+    document.getElementById(
+      "groupName"
+    );
+
+
+  const name =
+    input.value.trim();
+
+
+  if(!name){
+
+    showToast(
+      "Escribe un nombre para el grupo."
+    );
+
+    input.focus();
+
+    return;
+  }
+
+
+  const selected =
+    [
+      ...document
+        .querySelectorAll(
+          '#membersList input[type="checkbox"]:checked'
+        )
+    ]
+    .map(
+      checkbox =>
+        checkbox.value
+    );
+
+
+  try{
+
+    /*
+      El api.py del chat recibe Form(name, members)
+      con los miembros separados por coma.
+    */
+
+    const form =
+      new FormData();
+
+    form.append(
+      "name",
+      name
+    );
+
+    form.append(
+      "members",
+      selected.join(",")
+    );
+
+
+    const response =
+      await fetch(
+        API +
+        "/api/groups/create",
+        {
+          method:"POST",
+
+          headers:
+            authHeaders(),
+
+          body:
+            form
+        }
+      );
+
+
+    if(
+      response.status === 401 ||
+      response.status === 403
+    ){
+
+      localStorage.removeItem(
+        TOKEN_KEY
+      );
+
+      TOKEN =
+        "";
+
+      goAuth();
+
+      return;
+    }
+
+
+    if(!response.ok){
+
+      const data =
+        await response.json()
+          .catch(
+            () => ({})
+          );
+
+      throw new Error(
+        data.detail ||
+        "No se pudo crear el grupo."
+      );
+    }
+
+
+    input.value =
+      "";
+
+
+    document
+      .querySelectorAll(
+        '#membersList input[type="checkbox"]'
+      )
+      .forEach(
+        checkbox =>
+          checkbox.checked = false
+      );
+
+
+    await loadGroups();
+
+
+    openGroup(
+      name
+    );
+
+
+    showToast(
+      "Grupo creado."
+    );
+
+  }catch(error){
+
+    showToast(
+      error.message
+    );
+  }
+}
+
+
+/* ============================================================
+   WEBSOCKET
+============================================================ */
+
+function connectWebSocket(){
+
+  if(
+    ws
+  ){
+
+    try{
+      ws.close();
+    }catch{}
+  }
+
+
+  if(
+    !ME?.username ||
+    !TOKEN
+  ){
+    return;
+  }
+
+
+  const wsUrl =
+    API
+      .replace(
+        /^https:/,
+        "wss:"
+      )
+      .replace(
+        /^http:/,
+        "ws:"
+      );
+
+
+  /*
+    Con ?token= el servidor verifica la sesión
+    y marca al usuario como "En línea" de verdad.
+  */
+
+  ws =
+    new WebSocket(
+      wsUrl +
+      "/ws/" +
+      encodeURIComponent(
+        ME.username
+      ) +
+      "?token=" +
+      encodeURIComponent(
+        TOKEN
+      )
+    );
+
+
+  ws.onopen =
+    () => {
+
+      document.getElementById(
+        "statusMessage"
+      ).textContent =
+        "";
+    };
+
+
+  ws.onmessage =
+    async () => {
+
+      /*
+        No recarga la página.
+        Solo actualiza el chat y
+        el estado de usuarios.
+      */
+
+      if(
+        currentTarget
+      ){
+
+        try{
+          await loadMessages();
+        }catch{}
+      }
+
+      try{
+        await loadUsers();
+      }catch{}
+    };
+
+
+  ws.onclose =
+    () => {
+
+      clearTimeout(
+        reconnectTimer
+      );
+
+
+      reconnectTimer =
+        setTimeout(
+          () => {
+
+            if(
+              TOKEN &&
+              ME
+            ){
+
+              connectWebSocket();
+            }
+
+          },
+          WS_RECONNECT_MS
+        );
+    };
+
+
+  ws.onerror =
+    () => {
+
+      document.getElementById(
+        "statusMessage"
+      ).textContent =
+        "WebSocket desconectado";
+    };
+}
+
+
+/* ============================================================
+   LOGOUT
+============================================================ */
+
+async function logout(){
+
+  try{
+
+    await fetch(
+      `${API}/api/logout`,
+      {
+        method:"POST",
+        headers:
+          authHeaders()
+      }
+    );
+
+  }catch(error){
+
+    console.error(
+      error
+    );
+  }
+
+
+  if(ws){
+
+    try{
+      ws.close();
+    }catch{}
+  }
+
+
+  localStorage.removeItem(
+    TOKEN_KEY
+  );
+
+  TOKEN =
+    "";
+
+
+  goAuth();
+}
+
+
+/* ============================================================
+   BANNERS
+============================================================ */
+
+/*
+  Se guarda por usuario en este navegador:
+    smartchat_banner_<usuario>         -> "banner1.png" | "custom" | ""
+    smartchat_banner_<usuario>_custom  -> foto personalizada (data URL)
+*/
+
+function bannerKey(){
+
+  return BANNER_STORAGE_PREFIX +
+    (ME?.username || "");
+}
+
+
+function storageGet(key){
+
+  try{
+    return localStorage.getItem(key) || "";
+  }catch{
+    return "";
+  }
+}
+
+
+function storageSet(key, value){
+
+  try{
+
+    if(value){
+      localStorage.setItem(key, value);
+    }else{
+      localStorage.removeItem(key);
+    }
+
+    return true;
+
+  }catch{
+
+    return false;
+  }
+}
+
+
+function applyBanner(src){
+
+  const center =
+    document.getElementById(
+      "center"
+    );
+
+  if(!src){
+
+    center.style.backgroundImage =
+      "";
+
+    return;
+  }
+
+  center.style.backgroundImage =
+    `linear-gradient(rgba(20,24,30,${BANNER_DIM}),rgba(20,24,30,${BANNER_DIM})), url("${src}")`;
+}
+
+
+function currentBannerSrc(){
+
+  const choice =
+    storageGet(
+      bannerKey()
+    );
+
+  if(choice === "custom"){
+
+    return storageGet(
+      bannerKey() + "_custom"
+    );
+  }
+
+  return choice;
+}
+
+
+function renderBannerGrid(){
+
+  const grid =
+    document.getElementById(
+      "bannerGrid"
+    );
+
+  const choice =
+    storageGet(
+      bannerKey()
+    );
+
+  const custom =
+    storageGet(
+      bannerKey() + "_custom"
+    );
+
+  grid.innerHTML =
+    "";
+
+
+  const addOption =
+    (label, preview, value) => {
+
+      const button =
+        document.createElement(
+          "button"
+        );
+
+      button.type =
+        "button";
+
+      button.className =
+        "banner-opt" +
+        (choice === value ? " active" : "");
+
+
+      if(preview){
+
+        const img =
+          document.createElement(
+            "img"
+          );
+
+        img.src =
+          preview;
+
+        img.alt =
+          label;
+
+        img.onerror =
+          () => {
+
+            img.onerror =
+              null;
+
+            const missing =
+              document.createElement(
+                "div"
+              );
+
+            missing.className =
+              "banner-none";
+
+            missing.textContent =
+              "No encontrado";
+
+            img.replaceWith(
+              missing
+            );
+          };
+
+        button.appendChild(
+          img
+        );
+
+      }else{
+
+        const none =
+          document.createElement(
+            "div"
+          );
+
+        none.className =
+          "banner-none";
+
+        none.textContent =
+          "Fondo gris";
+
+        button.appendChild(
+          none
+        );
+      }
+
+
+      const text =
+        document.createElement(
+          "div"
+        );
+
+      text.textContent =
+        label;
+
+      button.appendChild(
+        text
+      );
+
+      button.onclick =
+        () =>
+          selectBanner(
+            value
+          );
+
+      grid.appendChild(
+        button
+      );
+    };
+
+
+  BANNERS.forEach(
+    banner =>
+      addOption(
+        banner.name,
+        banner.file,
+        banner.file
+      )
+  );
+
+
+  if(custom){
+
+    addOption(
+      "Mi foto",
+      custom,
+      "custom"
+    );
+  }
+
+
+  addOption(
+    "Sin banner",
+    "",
+    ""
+  );
+}
+
+
+function selectBanner(value){
+
+  storageSet(
+    bannerKey(),
+    value
+  );
+
+  applyBanner(
+    currentBannerSrc()
+  );
+
+  renderBannerGrid();
+}
+
+
+function openBannerModal(){
+
+  renderBannerGrid();
+
+  document.getElementById(
+    "bannerModal"
+  ).classList.add(
+    "show"
+  );
+}
+
+
+function closeBannerModal(){
+
+  document.getElementById(
+    "bannerModal"
+  ).classList.remove(
+    "show"
+  );
+}
+
+
+function fileToBannerData(file){
+
+  return new Promise(
+    (resolve, reject) => {
+
+      const reader =
+        new FileReader();
+
+      reader.onerror =
+        () =>
+          reject(
+            new Error(
+              "No se pudo leer la imagen."
+            )
+          );
+
+      reader.onload =
+        () => {
+
+          const img =
+            new Image();
+
+          img.onerror =
+            () =>
+              reject(
+                new Error(
+                  "El archivo no es una imagen válida."
+                )
+              );
+
+          img.onload =
+            () => {
+
+              /* Reduce la foto para que quepa en el almacenamiento del navegador */
+
+              const scale =
+                Math.min(
+                  1,
+                  CUSTOM_BANNER_MAX_SIDE /
+                  Math.max(
+                    img.width,
+                    img.height
+                  )
+                );
+
+              const canvas =
+                document.createElement(
+                  "canvas"
+                );
+
+              canvas.width =
+                Math.max(
+                  1,
+                  Math.round(
+                    img.width * scale
+                  )
+                );
+
+              canvas.height =
+                Math.max(
+                  1,
+                  Math.round(
+                    img.height * scale
+                  )
+                );
+
+              canvas
+                .getContext("2d")
+                .drawImage(
+                  img,
+                  0,
+                  0,
+                  canvas.width,
+                  canvas.height
+                );
+
+              resolve(
+                canvas.toDataURL(
+                  "image/jpeg",
+                  CUSTOM_BANNER_QUALITY
+                )
+              );
+            };
+
+          img.src =
+            reader.result;
+        };
+
+      reader.readAsDataURL(
+        file
+      );
+    }
+  );
+}
+
+
+async function uploadBanner(file){
+
+  if(!file){
+    return;
+  }
+
+  if(
+    !file.type.startsWith(
+      "image/"
+    )
+  ){
+
+    showToast(
+      "Elige una imagen (JPG, PNG, WEBP...)."
+    );
+
+    return;
+  }
+
+  try{
+
+    const data =
+      await fileToBannerData(
+        file
+      );
+
+    if(
+      !storageSet(
+        bannerKey() + "_custom",
+        data
+      )
+    ){
+
+      showToast(
+        "La foto es demasiado grande para guardarla."
+      );
+
+      return;
+    }
+
+    selectBanner(
+      "custom"
+    );
+
+    showToast(
+      "Banner actualizado."
+    );
+
+  }catch(error){
+
+    showToast(
+      error.message
+    );
+  }
+}
+
+
+/* ============================================================
+   EVENTS
+============================================================ */
+
+document.getElementById(
+  "sendBtn"
+).onclick =
+  sendMessage;
+
+
+document.getElementById(
+  "message"
+).addEventListener(
+  "keydown",
+  event => {
+
+    if(
+      event.key ===
+      "Enter"
+    ){
+
+      event.preventDefault();
+
+      sendMessage();
+    }
+  }
+);
+
+
+document.getElementById(
+  "fileBtn"
+).onclick =
+  () =>
+    document
+      .getElementById(
+        "fileInput"
+      )
+      .click();
+
+
+document.getElementById(
+  "fileInput"
+).addEventListener(
+  "change",
+  event => {
+
+    const file =
+      event.target.files?.[0];
+
+
+    if(file){
+
+      sendFile(
+        file
+      );
+    }
+
+
+    event.target.value =
+      "";
+  }
+);
+
+
+document.getElementById(
+  "createGroupBtn"
+).onclick =
+  createGroup;
+
+
+document.getElementById(
+  "bannerOpenBtn"
+).onclick =
+  openBannerModal;
+
+
+document.getElementById(
+  "bannerCloseBtn"
+).onclick =
+  closeBannerModal;
+
+
+document.getElementById(
+  "bannerModal"
+).addEventListener(
+  "click",
+  event => {
+
+    if(
+      event.target.id ===
+      "bannerModal"
+    ){
+
+      closeBannerModal();
+    }
+  }
+);
+
+
+document.addEventListener(
+  "keydown",
+  event => {
+
+    if(
+      event.key ===
+      "Escape"
+    ){
+
+      closeBannerModal();
+    }
+  }
+);
+
+
+document.getElementById(
+  "bannerUploadBtn"
+).onclick =
+  () =>
+    document
+      .getElementById(
+        "bannerFileInput"
+      )
+      .click();
+
+
+document.getElementById(
+  "bannerFileInput"
+).addEventListener(
+  "change",
+  event => {
+
+    const file =
+      event.target.files?.[0];
+
+
+    if(file){
+
+      uploadBanner(
+        file
+      );
+    }
+
+
+    event.target.value =
+      "";
+  }
+);
+
+
+/* ============================================================
+   START
+============================================================ */
+
+(async function(){
+
+  const authenticated =
+    await loadMe();
+
+
+  if(!authenticated){
+    return;
+  }
+
+
+  document.getElementById(
+    "app"
+  ).style.display =
+    "grid";
+
+
+  applyBanner(
+    currentBannerSrc()
+  );
+
+
+  await loadUsers();
+
+  await loadGroups();
+
+  connectWebSocket();
+
+
+  /*
+    Actualiza usuarios cada cierto tiempo.
+    No recarga la página y no toca
+    los mensajes del chat.
+  */
+
+  setInterval(
+    async () => {
+
+      if(
+        !TOKEN ||
+        !ME
+      ){
+        return;
+      }
+
+
+      try{
+
+        await loadUsers();
+
+      }catch(error){
+
+        console.error(
+          error
+        );
+      }
+
+    },
+    USERS_REFRESH_MS
+  );
+
+})();
+</script>
+
+</body>
+</html>

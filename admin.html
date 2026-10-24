@@ -1,0 +1,532 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="theme-color" content="#121212">
+    <title>Smart Moderation · Admin</title>
+    <script src="./url.js"></script>
+    <style>
+        :root {
+            --bg-base: #121212;
+            --bg-panel: #1a1a1a;
+            --bg-card: #2c2c2c;
+            --border: #333333;
+            --text-main: #ffffff;
+            --text-sec: #9e9e9e;
+            --cyan: #00bcd4;
+            --cyan-glow: rgba(0, 240, 255, 0.25);
+            --danger: #ff5252;
+            --success: #4caf50;
+            --warning: #ffc107;
+            --radius: 6px;
+        }
+        * { box-sizing: border-box; margin: 0; padding: 0; }
+        body { font-family: "Segoe UI", Arial, sans-serif; background: var(--bg-base); color: var(--text-main); min-height: 100vh; padding: 30px; }
+        .container { max-width: 1400px; margin: 0 auto; }
+        header { display: flex; justify-content: space-between; align-items: center; gap: 16px; padding-bottom: 20px; border-bottom: 1px solid var(--border); margin-bottom: 30px; }
+        .brand { font-size: 1.4rem; font-weight: 600; }
+        .header-actions { display: flex; gap: 10px; flex-wrap: wrap; }
+        button.btn, select.btn { background: var(--bg-card); border: 1px solid var(--border); color: var(--text-main); padding: 10px 16px; border-radius: var(--radius); cursor: pointer; transition: border-color .2s, color .2s; font-size: .95rem; }
+        button.btn:hover, select.btn:hover { border-color: var(--cyan); color: var(--cyan); }
+        button.btn:disabled { opacity: .55; cursor: wait; }
+        .section-title { font-weight: normal; font-size: 1.3rem; margin-bottom: 20px; display: flex; justify-content: space-between; align-items: center; gap: 12px; flex-wrap: wrap; }
+        .grid-2, .grid-3 { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 24px; margin-bottom: 30px; }
+        .grid-3 { grid-template-columns: repeat(3, minmax(0, 1fr)); }
+        .card { background: var(--bg-card); border-radius: var(--radius); padding: 24px; border: 1px solid var(--border); }
+        .card-title { color: var(--text-sec); font-size: .85rem; text-transform: uppercase; letter-spacing: 1px; margin-bottom: 16px; }
+        .stat-value { font-size: 2.2rem; overflow-wrap: anywhere; }
+        .text-cyan { color: var(--cyan); }
+        .table-card { padding: 0; overflow-x: auto; margin-bottom: 40px; }
+        table { width: 100%; border-collapse: collapse; font-size: .92rem; }
+        th, td { text-align: left; padding: 14px; border-bottom: 1px solid var(--border); vertical-align: top; }
+        th { color: var(--text-sec); font-weight: normal; white-space: nowrap; }
+        td { overflow-wrap: anywhere; }
+        .badge { display: inline-block; padding: 4px 8px; border-radius: 4px; font-size: .8rem; text-transform: uppercase; white-space: nowrap; }
+        .badge.high, .badge.critical { background: rgba(255, 82, 82, .2); color: var(--danger); }
+        .badge.medium { background: rgba(255, 193, 7, .2); color: var(--warning); }
+        .badge.low { background: rgba(0, 188, 212, .2); color: var(--cyan); }
+        .badge.ok { background: rgba(76, 175, 80, .18); color: #81c784; }
+        .badge.error { background: rgba(255, 82, 82, .2); color: var(--danger); }
+        .badge.pending { background: rgba(158, 158, 158, .15); color: var(--text-sec); }
+        .muted { color: var(--text-sec); }
+        .notice { margin-top: 14px; color: var(--text-sec); font-size: .9rem; line-height: 1.5; }
+        .error { color: var(--danger); min-height: 1.4em; margin-top: 12px; }
+        .login-wrap { max-width: 420px; margin: 7vh auto; }
+        .login-title { font-size: 1.5rem; margin-bottom: 8px; }
+        .login-subtitle { color: var(--text-sec); margin-bottom: 24px; }
+        .field { margin-bottom: 16px; }
+        .field label { display: block; margin-bottom: 8px; color: var(--text-sec); font-size: .92rem; }
+        .field input { width: 100%; padding: 12px 13px; background: var(--bg-base); border: 1px solid var(--border); border-radius: var(--radius); color: var(--text-main); font: inherit; outline: none; }
+        .field input:focus { border-color: var(--cyan); box-shadow: 0 0 0 2px var(--cyan-glow); }
+        .login-submit { width: 100%; margin-top: 4px; }
+        .hidden { display: none !important; }
+        .reason-cell { min-width: 190px; max-width: 300px; white-space: normal; color: var(--text-sec); font-size: .88rem; }
+        .message-cell { min-width: 220px; max-width: 420px; white-space: pre-wrap; overflow-wrap: anywhere; }
+        .filter-row { display: flex; gap: 10px; align-items: center; flex-wrap: wrap; margin-bottom: 16px; }
+        .filter-row label { color: var(--text-sec); font-size: .9rem; }
+        select.btn { min-width: 175px; }
+        .source-name { font-weight: 600; color: var(--cyan); }
+        .path-cell { color: var(--text-sec); font-family: ui-monospace, SFMono-Regular, Consolas, monospace; font-size: .82rem; min-width: 220px; }
+        .content-title { font-weight: 600; margin-bottom: 6px; }
+        .asset-link { color: var(--cyan); text-decoration: none; }
+        .asset-link:hover { text-decoration: underline; }
+        @media (max-width: 850px) { .grid-3 { grid-template-columns: 1fr; gap: 14px; } }
+        @media (max-width: 700px) {
+            body { padding: 16px; }
+            header { align-items: flex-start; flex-direction: column; }
+            .brand { font-size: 1.15rem; }
+            .grid-2 { grid-template-columns: 1fr; gap: 14px; margin-bottom: 20px; }
+            .card { padding: 18px; }
+            .section-title { font-size: 1.1rem; align-items: flex-start; }
+            button.btn, select.btn { padding: 9px 11px; }
+        }
+    </style>
+</head>
+<body>
+<div class="container">
+    <header>
+        <div class="brand">Smart Moderation · Admin</div>
+        <div class="header-actions">
+            <button id="refreshBtn" class="btn hidden" type="button">Actualizar</button>
+            <button id="logoutBtn" class="btn hidden" type="button">Cerrar sesión</button>
+        </div>
+    </header>
+
+    <main>
+        <section id="loginView" class="login-wrap">
+            <div class="card">
+                <h1 class="login-title">Administración</h1>
+                <p class="login-subtitle">Inicia sesión con las credenciales propias de Smart Moderation.</p>
+                <form id="loginForm">
+                    <div class="field">
+                        <label for="username">Usuario</label>
+                        <input id="username" name="username" autocomplete="username" required>
+                    </div>
+                    <div class="field">
+                        <label for="password">Contraseña</label>
+                        <input id="password" name="password" type="password" autocomplete="current-password" required>
+                    </div>
+                    <button id="loginBtn" class="btn login-submit" type="submit">Iniciar sesión</button>
+                    <p id="loginError" class="error" role="alert"></p>
+                </form>
+                <p id="configError" class="error" role="alert"></p>
+            </div>
+        </section>
+
+        <section id="dashboardView" class="hidden">
+            <div class="section-title">
+                <span>Panel de moderación</span>
+                <span id="apiStatus" class="muted" aria-live="polite"></span>
+            </div>
+
+            <div class="grid-3">
+                <div class="card">
+                    <div class="card-title">Elementos escaneados</div>
+                    <div class="stat-value text-cyan" id="statScanned">0</div>
+                </div>
+                <div class="card">
+                    <div class="card-title">Alertas activas</div>
+                    <div class="stat-value text-cyan" id="statAlerts">0</div>
+                </div>
+                <div class="card">
+                    <div class="card-title">Estado de OpenAI</div>
+                    <div class="stat-value" id="statOpenAI">—</div>
+                    <p class="notice">Modelo: <span id="modelName">—</span></p>
+                </div>
+            </div>
+
+            <div class="section-title">
+                <span>Servicios conectados</span>
+                <span class="muted">Rutas y última comprobación</span>
+            </div>
+            <div class="card table-card">
+                <table>
+                    <thead>
+                    <tr>
+                        <th>Servicio</th>
+                        <th>Estado</th>
+                        <th>Última comprobación</th>
+                        <th>Ruta / detalle</th>
+                    </tr>
+                    </thead>
+                    <tbody id="sourcesTableBody">
+                        <tr><td colspan="4" class="muted" style="text-align:center">Cargando servicios...</td></tr>
+                    </tbody>
+                </table>
+            </div>
+
+            <div class="section-title">
+                <span>Alertas detectadas</span>
+                <span class="muted" id="alertCountLabel"></span>
+            </div>
+            <div class="filter-row">
+                <label for="sourceFilter">Aplicación:</label>
+                <select id="sourceFilter" class="btn">
+                    <option value="">Todas las aplicaciones</option>
+                    <option value="smart-chat">Smart-Chat</option>
+                    <option value="smart-web">Smart-Web</option>
+                    <option value="smart-sound">Smart-Sound</option>
+                    <option value="smart-cloud">Smart-Cloud</option>
+                </select>
+                <button id="refreshAlertsBtn" class="btn" type="button">Actualizar alertas</button>
+            </div>
+            <div class="card table-card">
+                <table>
+                    <thead>
+                    <tr>
+                        <th>ID</th>
+                        <th>Aplicación</th>
+                        <th>Usuario</th>
+                        <th>Categoría</th>
+                        <th>Nivel</th>
+                        <th>Razón (IA)</th>
+                        <th>Título / contenido</th>
+                    </tr>
+                    </thead>
+                    <tbody id="alertsTableBody">
+                        <tr><td colspan="7" class="muted" style="text-align:center">Cargando alertas...</td></tr>
+                    </tbody>
+                </table>
+            </div>
+            <p class="notice">La moderación revisa texto e imágenes compatibles. No analiza directamente el audio ni determina si un archivo tiene copyright. Las alertas son señales para revisión administrativa, no una decisión automática sobre el usuario.</p>
+        </section>
+    </main>
+</div>
+
+<script>
+(() => {
+    'use strict';
+
+    // URL única de la API: se configura en url.js como URLS.moderation.
+    const TOKEN_KEY = 'moderation_admin_token';
+    let API_BASE = '';
+
+    const loginView = document.getElementById('loginView');
+    const dashboardView = document.getElementById('dashboardView');
+    const loginForm = document.getElementById('loginForm');
+    const loginBtn = document.getElementById('loginBtn');
+    const loginError = document.getElementById('loginError');
+    const configError = document.getElementById('configError');
+    const refreshBtn = document.getElementById('refreshBtn');
+    const refreshAlertsBtn = document.getElementById('refreshAlertsBtn');
+    const logoutBtn = document.getElementById('logoutBtn');
+    const apiStatus = document.getElementById('apiStatus');
+    const alertsTableBody = document.getElementById('alertsTableBody');
+    const sourcesTableBody = document.getElementById('sourcesTableBody');
+    const sourceFilter = document.getElementById('sourceFilter');
+
+    try {
+        if (typeof URLS === 'undefined' || !URLS.moderation) {
+            throw new Error('Falta URLS.moderation en url.js. Añade la URL pública de la API de moderación.');
+        }
+        API_BASE = String(URLS.moderation).replace(/\/+$/, '');
+    } catch (error) {
+        configError.textContent = error.message || 'No se pudo leer url.js.';
+        loginBtn.disabled = true;
+    }
+
+    function getToken() {
+        return sessionStorage.getItem(TOKEN_KEY) || '';
+    }
+
+    function getHeaders(includeJson = false) {
+        const headers = {};
+        if (includeJson) headers['Content-Type'] = 'application/json';
+        const token = getToken();
+        if (token) headers['Authorization'] = `Bearer ${token}`;
+        return headers;
+    }
+
+    async function readResponse(response) {
+        try { return await response.json(); }
+        catch (_) { return {}; }
+    }
+
+    function clearTable(tbody, colspan, message, className = 'muted') {
+        tbody.replaceChildren();
+        const row = document.createElement('tr');
+        const cell = document.createElement('td');
+        cell.colSpan = colspan;
+        cell.className = className;
+        cell.style.textAlign = 'center';
+        cell.textContent = message;
+        row.appendChild(cell);
+        tbody.appendChild(row);
+    }
+
+    function showLogin(message = '') {
+        sessionStorage.removeItem(TOKEN_KEY);
+        dashboardView.classList.add('hidden');
+        refreshBtn.classList.add('hidden');
+        logoutBtn.classList.add('hidden');
+        loginView.classList.remove('hidden');
+        loginError.textContent = message;
+    }
+
+    function showDashboard() {
+        loginView.classList.add('hidden');
+        dashboardView.classList.remove('hidden');
+        refreshBtn.classList.remove('hidden');
+        logoutBtn.classList.remove('hidden');
+        loginError.textContent = '';
+    }
+
+    function displayName(source) {
+        const names = {
+            'smart-chat': 'Smart-Chat',
+            'smart-web': 'Smart-Web',
+            'smart-sound': 'Smart-Sound',
+            'smart-cloud': 'Smart-Cloud'
+        };
+        return names[source] || source || 'Desconocido';
+    }
+
+    function makeBadge(label, className) {
+        const badge = document.createElement('span');
+        badge.className = `badge ${className}`;
+        badge.textContent = label;
+        return badge;
+    }
+
+    async function login(event) {
+        event.preventDefault();
+        loginError.textContent = '';
+
+        if (!API_BASE) {
+            loginError.textContent = 'Configura URLS.moderation en url.js.';
+            return;
+        }
+
+        loginBtn.disabled = true;
+        loginBtn.textContent = 'Conectando...';
+
+        const username = document.getElementById('username').value.trim();
+        const password = document.getElementById('password').value;
+
+        try {
+            const response = await fetch(`${API_BASE}/api/moderation/login`, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ username, password })
+            });
+            const data = await readResponse(response);
+
+            if (!response.ok || !data.token) {
+                throw new Error(data.detail || 'No se pudo iniciar sesión.');
+            }
+
+            sessionStorage.setItem(TOKEN_KEY, data.token);
+            document.getElementById('password').value = '';
+            showDashboard();
+            await loadModeration();
+        } catch (error) {
+            loginError.textContent = error.message || 'Error de conexión con Smart Moderation.';
+        } finally {
+            loginBtn.disabled = false;
+            loginBtn.textContent = 'Iniciar sesión';
+        }
+    }
+
+    async function logout() {
+        const token = getToken();
+        if (token && API_BASE) {
+            try {
+                await fetch(`${API_BASE}/api/moderation/logout`, {
+                    method: 'POST',
+                    headers: getHeaders()
+                });
+            } catch (_) {
+                // Se limpia la sesión local aunque falle la red.
+            }
+        }
+        showLogin('');
+        document.getElementById('password').value = '';
+    }
+
+    function renderTable(alerts) {
+        if (!Array.isArray(alerts) || alerts.length === 0) {
+            clearTable(alertsTableBody, 7, 'No hay alertas para este filtro.');
+            document.getElementById('alertCountLabel').textContent = '0 alertas';
+            return;
+        }
+
+        alertsTableBody.replaceChildren();
+
+        for (const alert of alerts) {
+            const row = document.createElement('tr');
+
+            const id = document.createElement('td');
+            id.className = 'muted';
+            id.textContent = alert.id_label || `${alert.source || 'item'}:${alert.source_item_id || alert.message_id || alert.id || ''}`;
+
+            const appCell = document.createElement('td');
+            const appName = document.createElement('span');
+            appName.className = 'source-name';
+            appName.textContent = displayName(alert.source || alert.app);
+            appCell.appendChild(appName);
+
+            const sender = document.createElement('td');
+            sender.textContent = alert.sender ? `@${alert.sender}` : '—';
+
+            const category = document.createElement('td');
+            category.textContent = alert.category || '—';
+
+            const severityCell = document.createElement('td');
+            const severity = String(alert.severity || 'low').toLowerCase();
+            const badgeKind = ['low', 'medium', 'high', 'critical'].includes(severity) ? severity : 'low';
+            severityCell.appendChild(makeBadge(alert.severity || '—', badgeKind));
+
+            const reason = document.createElement('td');
+            reason.className = 'reason-cell';
+            reason.textContent = alert.reason || '—';
+
+            const content = document.createElement('td');
+            content.className = 'message-cell';
+            if (alert.title) {
+                const title = document.createElement('div');
+                title.className = 'content-title';
+                title.textContent = alert.title;
+                content.appendChild(title);
+            }
+            const message = document.createElement('div');
+            message.textContent = alert.message || alert.title || 'Sin texto asociado';
+            content.appendChild(message);
+
+            if (alert.asset_path && /^https?:\/\//i.test(alert.asset_path)) {
+                const link = document.createElement('a');
+                link.className = 'asset-link';
+                link.href = alert.asset_path;
+                link.target = '_blank';
+                link.rel = 'noopener noreferrer';
+                link.textContent = 'Abrir recurso';
+                content.appendChild(link);
+            }
+
+            row.append(id, appCell, sender, category, severityCell, reason, content);
+            alertsTableBody.appendChild(row);
+        }
+
+        document.getElementById('alertCountLabel').textContent = `${alerts.length} alertas mostradas`;
+    }
+
+    function renderSources(sourceData, statusData) {
+        sourcesTableBody.replaceChildren();
+        const sources = sourceData && sourceData.sources ? sourceData.sources : {};
+        const statusRows = Array.isArray(statusData && statusData.sources) ? statusData.sources : [];
+        const names = ['smart-chat', 'smart-web', 'smart-sound', 'smart-cloud'];
+
+        for (const name of names) {
+            const config = sources[name] || {};
+            const last = config.last_status || statusRows.find(item => item.source === name) || null;
+            const row = document.createElement('tr');
+
+            const nameCell = document.createElement('td');
+            const nameSpan = document.createElement('span');
+            nameSpan.className = 'source-name';
+            nameSpan.textContent = displayName(name);
+            nameCell.appendChild(nameSpan);
+
+            const statusCell = document.createElement('td');
+            const statusText = last ? String(last.status || 'desconocido') : 'pendiente';
+            let badgeClass = 'pending';
+            if (statusText === 'ok') badgeClass = 'ok';
+            else if (statusText === 'error' || statusText === 'unavailable') badgeClass = 'error';
+            statusCell.appendChild(makeBadge(statusText, badgeClass));
+
+            const checkedCell = document.createElement('td');
+            checkedCell.className = 'muted';
+            checkedCell.textContent = last ? (last.checked_at || '—') : 'Todavía sin comprobación';
+
+            const routeCell = document.createElement('td');
+            routeCell.className = 'path-cell';
+            const detail = config.database || config.api_url || config.directory || '—';
+            routeCell.textContent = String(detail);
+            if (last && last.detail) {
+                const detailLine = document.createElement('div');
+                detailLine.className = 'muted';
+                detailLine.style.marginTop = '6px';
+                detailLine.textContent = last.detail;
+                routeCell.appendChild(detailLine);
+            }
+
+            row.append(nameCell, statusCell, checkedCell, routeCell);
+            sourcesTableBody.appendChild(row);
+        }
+    }
+
+    async function loadModeration() {
+        if (!getToken()) {
+            showLogin('Inicia sesión para ver el panel.');
+            return;
+        }
+        if (!API_BASE) {
+            apiStatus.textContent = 'Falta URLS.moderation en url.js';
+            return;
+        }
+
+        apiStatus.textContent = 'Actualizando...';
+        refreshBtn.disabled = true;
+        refreshAlertsBtn.disabled = true;
+
+        const source = sourceFilter.value;
+        const alertParams = new URLSearchParams({ limit: '50' });
+        if (source) alertParams.set('source', source);
+
+        try {
+            const [statRes, alertRes, sourcesRes] = await Promise.all([
+                fetch(`${API_BASE}/api/moderation/status`, { headers: getHeaders() }),
+                fetch(`${API_BASE}/api/moderation/alerts?${alertParams.toString()}`, { headers: getHeaders() }),
+                fetch(`${API_BASE}/api/moderation/sources`, { headers: getHeaders() })
+            ]);
+
+            const [stats, alertData, sourceData] = await Promise.all([
+                readResponse(statRes), readResponse(alertRes), readResponse(sourcesRes)
+            ]);
+
+            if ([statRes, alertRes, sourcesRes].some(r => r.status === 401 || r.status === 403)) {
+                showLogin('La sesión administrativa expiró. Inicia sesión otra vez.');
+                return;
+            }
+
+            if (!statRes.ok) throw new Error(stats.detail || `Error de estadísticas (${statRes.status}).`);
+            if (!alertRes.ok) throw new Error(alertData.detail || `Error de alertas (${alertRes.status}).`);
+
+            document.getElementById('statScanned').textContent = stats.scanned ?? 0;
+            document.getElementById('statAlerts').textContent = stats.alerts ?? 0;
+            document.getElementById('statOpenAI').textContent = stats.openai_configured ? 'Configurado' : 'Sin clave';
+            document.getElementById('statOpenAI').style.color = stats.openai_configured ? 'var(--success)' : 'var(--danger)';
+            document.getElementById('modelName').textContent = stats.model ?? 'Moderación';
+
+            renderTable(alertData.alerts || []);
+            renderSources(sourceResOkay(sourcesRes) ? sourceData : null, stats);
+            apiStatus.textContent = `OpenAI · ${stats.model || 'moderación'} · revisión cada ${stats.interval_seconds ?? '—'} s`;
+        } catch (error) {
+            apiStatus.textContent = 'Error de conexión';
+            clearTable(alertsTableBody, 7, error.message || 'No se pudo conectar con la API.', 'error');
+        } finally {
+            refreshBtn.disabled = false;
+            refreshAlertsBtn.disabled = false;
+        }
+    }
+
+    function sourceResOkay(response) {
+        return response && response.ok;
+    }
+
+    loginForm.addEventListener('submit', login);
+    refreshBtn.addEventListener('click', loadModeration);
+    refreshAlertsBtn.addEventListener('click', loadModeration);
+    logoutBtn.addEventListener('click', logout);
+    sourceFilter.addEventListener('change', loadModeration);
+
+    if (getToken() && API_BASE) {
+        showDashboard();
+        loadModeration();
+    } else {
+        showLogin('');
+    }
+})();
+</script>
+</body>
+</html>

@@ -310,15 +310,14 @@
         // =========================================================
 
         function redirectToKnFoundation() {
+    const currentUrl = new URL(window.location.href);
+    currentUrl.searchParams.delete("token");
 
-            const currentUrl =
-                window.location.href;
+    const authUrl = new URL(KN_FOUNDATION_URL);
+    authUrl.searchParams.set("redirect", currentUrl.toString());
 
-            const redirectUrl =
-                `${KN_FOUNDATION_URL}/?redirect=${encodeURIComponent(currentUrl)}`;
-
-            window.location.replace(redirectUrl);
-        }
+    window.location.replace(authUrl.toString());
+}
 
 
         // =========================================================

@@ -1,0 +1,1677 @@
+<!doctype html>
+<html lang="es">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Smart-Account Manager</title>
+
+<script src="./url.js"></script>
+
+<script>
+// ==========================================================
+// CONFIGURACIÓN  (aquí cambias las URLs y los límites)
+// ==========================================================
+
+// Las URLs se cambian en url.js (misma carpeta que este HTML)
+
+// Dirección de la API de Smart-Account (sesiones, foto, contraseña, cuenta)
+const API_URL = URLS.account;
+
+// Página de inicio de sesión
+const AUTH_PAGE = URLS.auth;
+
+// Nombres con los que el login guarda los datos en el navegador
+const TOKEN_KEY = "smart_token";
+const USER_KEY = "smart_user";
+
+// Idioma elegido (se guarda en el navegador)
+const LANG_KEY = "smartLang";
+
+// Límites (deben coincidir con tu api.py de Smart-Account)
+const MAX_PFP = 5 * 1024 * 1024;
+const IMAGE_TYPES = ["image/jpeg", "image/png", "image/webp", "image/gif"];
+const MIN_PASSWORD = 8;
+const MAX_PASSWORD = 50;
+</script>
+
+<style>
+:root{
+    --bg:#0e1117;
+    --surface:#161b24;
+    --surface-2:#1c222d;
+    --field:#10141b;
+    --border:rgba(255,255,255,.08);
+    --border-strong:rgba(255,255,255,.16);
+    --text:#f3f6fa;
+    --muted:#97a3b3;
+    --faint:#6b7685;
+    --cyan:#00f0ff;
+    --cyan-2:#00c8d7;
+    --green:#35d06f;
+    --red:#ff5b67;
+    --violet:#7b61ff;
+    --radius:22px;
+}
+
+*{
+    box-sizing:border-box;
+    margin:0;
+    padding:0;
+    font-family:system-ui,"Segoe UI",Roboto,Arial,sans-serif;
+}
+
+html,body{
+    min-height:100%;
+}
+
+body{
+    background:
+        radial-gradient(900px 500px at 12% -10%,rgba(0,240,255,.12),transparent 60%),
+        radial-gradient(800px 500px at 100% 0%,rgba(123,97,255,.13),transparent 55%),
+        var(--bg);
+    background-attachment:fixed;
+    color:var(--text);
+    padding:26px 18px 40px;
+    -webkit-font-smoothing:antialiased;
+}
+
+button,input{
+    font:inherit;
+}
+
+button{
+    cursor:pointer;
+    border:0;
+}
+
+.shell{
+    width:min(1040px,100%);
+    margin:auto;
+}
+
+/* =========================================================
+   TOP
+   ========================================================= */
+
+.top{
+    display:flex;
+    align-items:center;
+    justify-content:space-between;
+    gap:15px;
+    margin-bottom:18px;
+}
+
+.brand{
+    display:flex;
+    align-items:center;
+    gap:11px;
+    min-width:0;
+}
+
+.brand-mark{
+    width:36px;
+    height:36px;
+    border-radius:11px;
+    display:grid;
+    place-items:center;
+    background:linear-gradient(135deg,var(--cyan),var(--violet));
+    color:#04121a;
+    font-weight:800;
+    font-size:15px;
+    flex:none;
+    box-shadow:0 6px 20px rgba(0,240,255,.25);
+}
+
+.brandname{
+    font-size:16px;
+    font-weight:600;
+    letter-spacing:.2px;
+    white-space:nowrap;
+    overflow:hidden;
+    text-overflow:ellipsis;
+}
+
+.language{
+    border:1px solid var(--border);
+    background:rgba(255,255,255,.04);
+    color:var(--muted);
+    border-radius:100px;
+    padding:9px 16px;
+    font-size:13px;
+    font-weight:500;
+    flex-shrink:0;
+    transition:.2s;
+}
+
+.language:hover{
+    color:var(--text);
+    border-color:var(--border-strong);
+    background:rgba(255,255,255,.08);
+}
+
+/* =========================================================
+   MAIN CARD
+   ========================================================= */
+
+.card{
+    background:var(--surface);
+    border:1px solid var(--border);
+    border-radius:28px;
+    overflow:hidden;
+    box-shadow:0 30px 80px rgba(0,0,0,.45);
+}
+
+/* =========================================================
+   ACCOUNT HEADER
+   ========================================================= */
+
+.cover{
+    height:130px;
+    background:
+        radial-gradient(260px 120px at 85% 0%,rgba(255,255,255,.18),transparent 70%),
+        linear-gradient(120deg,#00b9c8 0%,#3a6df0 55%,#7b61ff 100%);
+    position:relative;
+}
+
+.cover::after{
+    content:"";
+    position:absolute;
+    inset:0;
+    background:linear-gradient(180deg,transparent 40%,rgba(22,27,36,.55));
+}
+
+.account-header{
+    padding:0 48px 32px;
+    margin-top:-62px;
+    position:relative;
+    z-index:1;
+    display:flex;
+    align-items:flex-end;
+    gap:26px;
+    border-bottom:1px solid var(--border);
+}
+
+.avatar-wrap{
+    width:132px;
+    height:132px;
+    flex:0 0 132px;
+    border-radius:50%;
+    overflow:hidden;
+    position:relative;
+    background:var(--surface-2);
+    border:4px solid var(--surface);
+    box-shadow:0 0 0 2px var(--cyan),0 14px 34px rgba(0,240,255,.22);
+}
+
+.avatar{
+    width:100%;
+    height:100%;
+    display:block;
+    object-fit:cover;
+}
+
+.avatar[hidden]{
+    display:none;
+}
+
+.avatar-fallback{
+    position:absolute;
+    inset:0;
+    display:grid;
+    place-items:center;
+    font-size:52px;
+    font-weight:700;
+    color:#04121a;
+    background:linear-gradient(135deg,var(--cyan),var(--violet));
+}
+
+.avatar-fallback[hidden]{
+    display:none;
+}
+
+.account-info{
+    min-width:0;
+    padding-bottom:4px;
+}
+
+.chips{
+    display:flex;
+    align-items:center;
+    gap:8px;
+    flex-wrap:wrap;
+    margin-bottom:12px;
+}
+
+.chip{
+    display:inline-flex;
+    align-items:center;
+    gap:7px;
+    padding:6px 11px;
+    border-radius:999px;
+    background:rgba(255,255,255,.06);
+    border:1px solid var(--border);
+    color:var(--cyan);
+    font-size:12px;
+    font-weight:500;
+}
+
+.chip.live{
+    color:var(--green);
+}
+
+.chip.live::before{
+    content:"";
+    width:7px;
+    height:7px;
+    border-radius:50%;
+    background:var(--green);
+    box-shadow:0 0 0 4px rgba(53,208,111,.18);
+}
+
+.username{
+    font-size:32px;
+    font-weight:600;
+    line-height:1.15;
+    letter-spacing:-.3px;
+    overflow-wrap:anywhere;
+}
+
+.account-note{
+    margin-top:10px;
+    color:var(--muted);
+    font-size:13px;
+    line-height:1.55;
+    max-width:520px;
+}
+
+/* =========================================================
+   BODY
+   ========================================================= */
+
+.content{
+    padding:34px 48px 38px;
+}
+
+.intro{
+    margin-bottom:26px;
+}
+
+.intro h1{
+    font-size:28px;
+    font-weight:600;
+    letter-spacing:-.3px;
+    margin-bottom:9px;
+}
+
+.intro p{
+    max-width:700px;
+    color:var(--muted);
+    font-size:14px;
+    line-height:1.6;
+}
+
+/* =========================================================
+   SETTINGS GRID
+   ========================================================= */
+
+.settings{
+    display:grid;
+    grid-template-columns:1fr 1fr;
+    gap:16px;
+}
+
+.section{
+    background:var(--surface-2);
+    border:1px solid var(--border);
+    border-radius:var(--radius);
+    padding:24px;
+    transition:border-color .2s;
+}
+
+.section:hover{
+    border-color:var(--border-strong);
+}
+
+.section.full{
+    grid-column:1 / -1;
+}
+
+.section-head{
+    display:flex;
+    align-items:center;
+    gap:12px;
+    margin-bottom:8px;
+}
+
+.icon{
+    width:38px;
+    height:38px;
+    border-radius:12px;
+    display:grid;
+    place-items:center;
+    font-size:18px;
+    background:rgba(0,240,255,.1);
+    border:1px solid rgba(0,240,255,.2);
+    flex:none;
+}
+
+.icon.red{
+    background:rgba(255,91,103,.1);
+    border-color:rgba(255,91,103,.25);
+}
+
+.section h2{
+    font-size:17px;
+    font-weight:600;
+}
+
+.section-description{
+    color:var(--muted);
+    font-size:13px;
+    line-height:1.55;
+    margin-bottom:18px;
+}
+
+/* =========================================================
+   FILE
+   ========================================================= */
+
+.file-row{
+    display:flex;
+    align-items:center;
+    gap:12px;
+    flex-wrap:wrap;
+}
+
+.file-row input[type=file]{
+    position:absolute;
+    width:1px;
+    height:1px;
+    opacity:0;
+    pointer-events:none;
+}
+
+.drop{
+    flex:1;
+    min-width:220px;
+    display:flex;
+    align-items:center;
+    gap:12px;
+    padding:12px 14px;
+    border:1.5px dashed var(--border-strong);
+    border-radius:14px;
+    background:var(--field);
+    color:var(--muted);
+    font-size:13px;
+    cursor:pointer;
+    transition:.2s;
+}
+
+.drop:hover,
+.file-row input:focus-visible + .drop{
+    border-color:var(--cyan);
+    color:var(--text);
+    background:rgba(0,240,255,.05);
+}
+
+.drop b{
+    color:var(--cyan);
+    font-weight:600;
+    white-space:nowrap;
+}
+
+.drop span{
+    min-width:0;
+    overflow:hidden;
+    text-overflow:ellipsis;
+    white-space:nowrap;
+}
+
+/* =========================================================
+   INPUTS
+   ========================================================= */
+
+.field{
+    margin-bottom:14px;
+}
+
+.field label{
+    display:block;
+    margin-bottom:7px;
+    color:#d6dde7;
+    font-size:13px;
+    font-weight:500;
+}
+
+.input{
+    width:100%;
+    padding:13px 14px;
+    border:1px solid var(--border-strong);
+    border-radius:12px;
+    outline:0;
+    background:var(--field);
+    color:var(--text);
+    font-size:15px;
+    transition:.2s;
+}
+
+.input::placeholder{
+    color:var(--faint);
+}
+
+.input:focus{
+    border-color:var(--cyan);
+    box-shadow:0 0 0 4px rgba(0,240,255,.12);
+}
+
+/* =========================================================
+   BUTTONS
+   ========================================================= */
+
+.primary{
+    background:linear-gradient(135deg,var(--cyan),var(--cyan-2));
+    color:#04121a;
+    border-radius:100px;
+    padding:12px 22px;
+    font-weight:600;
+    font-size:14px;
+    box-shadow:0 6px 18px rgba(0,240,255,.2);
+    transition:.2s;
+}
+
+.primary:hover{
+    transform:translateY(-1px);
+    box-shadow:0 10px 24px rgba(0,240,255,.3);
+}
+
+.primary:active{
+    transform:translateY(0);
+}
+
+.secondary{
+    background:rgba(255,255,255,.06);
+    border:1px solid var(--border);
+    color:var(--text);
+    border-radius:100px;
+    padding:11px 20px;
+    font-weight:500;
+    font-size:14px;
+    transition:.2s;
+}
+
+.secondary:hover{
+    background:rgba(255,255,255,.1);
+    border-color:var(--border-strong);
+}
+
+.danger{
+    background:rgba(255,91,103,.12);
+    border:1px solid rgba(255,91,103,.4);
+    color:#ff8c95;
+    border-radius:100px;
+    padding:11px 20px;
+    font-weight:600;
+    font-size:14px;
+    transition:.2s;
+}
+
+.danger:hover{
+    background:var(--red);
+    border-color:var(--red);
+    color:#fff;
+}
+
+.primary:disabled,
+.secondary:disabled,
+.danger:disabled{
+    opacity:.5;
+    cursor:not-allowed;
+    transform:none;
+}
+
+/* =========================================================
+   STATUS
+   ========================================================= */
+
+.status{
+    margin-top:12px;
+    font-size:13px;
+    line-height:1.45;
+    padding:0;
+}
+
+.status:empty{
+    display:none;
+}
+
+.status:not(:empty){
+    padding:10px 12px;
+    border-radius:11px;
+    background:rgba(255,255,255,.05);
+    color:var(--muted);
+}
+
+.status.ok{
+    background:rgba(53,208,111,.1);
+    color:#7be0a0;
+}
+
+.status.err{
+    background:rgba(255,91,103,.1);
+    color:#ff9aa2;
+}
+
+/* =========================================================
+   ACCOUNT SECTION
+   ========================================================= */
+
+.danger-zone{
+    margin-top:20px;
+    padding-top:20px;
+    border-top:1px solid var(--border);
+}
+
+.danger-zone h3{
+    font-size:15px;
+    font-weight:600;
+    margin-bottom:6px;
+    color:#ff8c95;
+}
+
+/* =========================================================
+   FOOTER
+   ========================================================= */
+
+.foot{
+    display:flex;
+    justify-content:space-between;
+    align-items:center;
+    margin-top:26px;
+    padding-top:20px;
+    border-top:1px solid var(--border);
+    color:var(--faint);
+    font-size:12px;
+}
+
+/* =========================================================
+   MODAL
+   ========================================================= */
+
+.modal{
+    position:fixed;
+    inset:0;
+    background:rgba(5,7,10,.7);
+    backdrop-filter:blur(6px);
+    -webkit-backdrop-filter:blur(6px);
+    display:none;
+    align-items:center;
+    justify-content:center;
+    padding:20px;
+    z-index:10;
+}
+
+.modal.open{
+    display:flex;
+}
+
+.modalbox{
+    width:min(480px,100%);
+    background:var(--surface);
+    border:1px solid var(--border-strong);
+    border-radius:26px;
+    padding:28px;
+    box-shadow:0 30px 80px rgba(0,0,0,.6);
+    animation:pop .18s ease-out;
+}
+
+@keyframes pop{
+    from{opacity:0;transform:translateY(8px) scale(.98);}
+    to{opacity:1;transform:none;}
+}
+
+.modalbox h2{
+    margin:0 0 8px;
+    font-size:21px;
+    font-weight:600;
+}
+
+.modalbox p{
+    margin:0 0 18px;
+    color:var(--muted);
+    line-height:1.55;
+    font-size:14px;
+}
+
+.modal-actions{
+    display:flex;
+    justify-content:flex-end;
+    gap:10px;
+    margin-top:18px;
+}
+
+.close{
+    float:right;
+    width:34px;
+    height:34px;
+    border-radius:50%;
+    background:rgba(255,255,255,.06);
+    color:#ddd;
+    font-size:20px;
+    line-height:1;
+    transition:.2s;
+}
+
+.close:hover{
+    background:rgba(255,255,255,.12);
+}
+
+/* =========================================================
+   RESPONSIVE
+   ========================================================= */
+
+@media(max-width:800px){
+
+    .account-header{
+        padding:0 26px 28px;
+    }
+
+    .content{
+        padding:28px 26px 32px;
+    }
+
+    .settings{
+        grid-template-columns:1fr;
+    }
+
+    .section.full{
+        grid-column:auto;
+    }
+}
+
+@media(max-width:560px){
+
+    body{
+        padding:12px;
+    }
+
+    .cover{
+        height:104px;
+    }
+
+    .account-header{
+        flex-direction:column;
+        align-items:center;
+        text-align:center;
+        margin-top:-56px;
+        gap:16px;
+    }
+
+    .chips{
+        justify-content:center;
+    }
+
+    .account-info{
+        width:100%;
+    }
+
+    .username{
+        font-size:26px;
+    }
+
+    .content{
+        padding:24px 18px 28px;
+    }
+
+    .intro h1{
+        font-size:24px;
+    }
+
+    .foot{
+        flex-direction:column;
+        align-items:flex-start;
+        gap:8px;
+    }
+
+    .primary,
+    .danger,
+    .secondary{
+        width:100%;
+    }
+
+    .modal-actions{
+        flex-direction:column-reverse;
+    }
+
+    .file-row{
+        align-items:stretch;
+        flex-direction:column;
+    }
+}
+</style>
+</head>
+
+<body>
+
+<div class="shell">
+
+    <div class="top">
+
+        <div class="brand">
+            <div class="brand-mark">S</div>
+            <span class="brandname">Smart-Account Manager</span>
+        </div>
+
+        <button class="language" id="langBtn" type="button">English</button>
+
+    </div>
+
+
+    <section class="card">
+
+        <div class="cover"></div>
+
+        <div class="account-header">
+
+            <div class="avatar-wrap">
+                <img id="avatar" class="avatar" alt="Foto de perfil" hidden>
+                <div id="avatarFallback" class="avatar-fallback">?</div>
+            </div>
+
+            <div class="account-info">
+
+                <div class="chips">
+                    <span class="chip" data-i18n="accountLabel">Smart-Account</span>
+                    <span class="chip live" data-i18n="sessionActive">Sesión activa</span>
+                </div>
+
+                <div id="username" class="username">...</div>
+
+                <div class="account-note" data-i18n="accountNote"></div>
+
+            </div>
+
+        </div>
+
+
+        <div class="content">
+
+            <div class="intro">
+                <h1 data-i18n="heroTitle"></h1>
+                <p data-i18n="heroSub"></p>
+            </div>
+
+
+            <div class="settings">
+
+                <!-- FOTO DE PERFIL -->
+
+                <section class="section full">
+
+                    <div class="section-head">
+                        <div class="icon">🖼️</div>
+                        <h2 data-i18n="pfpTitle"></h2>
+                    </div>
+
+                    <p class="section-description" data-i18n="pfpSub"></p>
+
+                    <div class="file-row">
+
+                        <input
+                            id="pfpFile"
+                            type="file"
+                            accept="image/jpeg,image/png,image/webp,image/gif"
+                        >
+
+                        <label class="drop" for="pfpFile">
+                            <b data-i18n="pfpPick"></b>
+                            <span id="pfpFileName"></span>
+                        </label>
+
+                        <button class="primary" id="pfpBtn" type="button" data-i18n="pfpBtn"></button>
+
+                    </div>
+
+                    <div id="pfpStatus" class="status" aria-live="polite"></div>
+
+                </section>
+
+
+                <!-- CONTRASEÑA -->
+
+                <section class="section">
+
+                    <div class="section-head">
+                        <div class="icon">🔒</div>
+                        <h2 data-i18n="passTitle"></h2>
+                    </div>
+
+                    <p class="section-description" data-i18n="passSub"></p>
+
+                    <div class="field">
+                        <label for="currentPassword" data-i18n="current"></label>
+                        <input
+                            class="input"
+                            id="currentPassword"
+                            type="password"
+                            autocomplete="current-password"
+                        >
+                    </div>
+
+                    <div class="field">
+                        <label for="newPassword" data-i18n="newp"></label>
+                        <input
+                            class="input"
+                            id="newPassword"
+                            type="password"
+                            autocomplete="new-password"
+                        >
+                    </div>
+
+                    <div class="field">
+                        <label for="confirmPassword" data-i18n="confirm"></label>
+                        <input
+                            class="input"
+                            id="confirmPassword"
+                            type="password"
+                            autocomplete="new-password"
+                        >
+                    </div>
+
+                    <button class="primary" id="passBtn" type="button" data-i18n="passBtn"></button>
+
+                    <div id="passStatus" class="status" aria-live="polite"></div>
+
+                </section>
+
+
+                <!-- CUENTA -->
+
+                <section class="section">
+
+                    <div class="section-head">
+                        <div class="icon">⚙️</div>
+                        <h2 data-i18n="accountSettingsTitle"></h2>
+                    </div>
+
+                    <p class="section-description" data-i18n="accountSettingsSub"></p>
+
+                    <button class="secondary" id="logoutBtn" type="button" data-i18n="logout"></button>
+
+                    <div class="danger-zone">
+
+                        <h3 data-i18n="deleteTitle"></h3>
+
+                        <p class="section-description" data-i18n="deleteSub"></p>
+
+                        <button class="danger" id="deleteBtn" type="button" data-i18n="deleteBtn"></button>
+
+                        <div id="deleteStatus" class="status" aria-live="polite"></div>
+
+                    </div>
+
+                </section>
+
+            </div>
+
+
+            <div class="foot">
+                <span>Smart-Account Manager</span>
+                <span id="year"></span>
+            </div>
+
+        </div>
+
+    </section>
+
+</div>
+
+
+<!-- =====================================================
+     MODAL ELIMINAR CUENTA
+     ===================================================== -->
+
+<div class="modal" id="deleteModal">
+
+    <div class="modalbox">
+
+        <button class="close" id="closeDelete" type="button" aria-label="Cerrar">×</button>
+
+        <h2 data-i18n="modalTitle"></h2>
+
+        <p data-i18n="modalText"></p>
+
+        <div class="field">
+            <label for="deleteConfirm" data-i18n="deleteConfirmLabel"></label>
+            <input
+                class="input"
+                id="deleteConfirm"
+                type="text"
+                autocomplete="off"
+            >
+        </div>
+
+        <div id="modalStatus" class="status" aria-live="polite"></div>
+
+        <div class="modal-actions">
+            <button class="secondary" id="cancelDelete" type="button" data-i18n="cancel"></button>
+            <button class="danger" id="confirmDelete" type="button" data-i18n="deletePermanent"></button>
+        </div>
+
+    </div>
+
+</div>
+
+
+<script>
+
+let token = localStorage.getItem(TOKEN_KEY) || "";
+
+let lang = localStorage.getItem(LANG_KEY) || "es";
+
+let savedAvatar = "";
+
+let previewUrl = "";
+
+const $ = id => document.getElementById(id);
+
+
+/* =========================================================
+   TRADUCCIONES
+   ========================================================= */
+
+const T = {
+
+    es:{
+        switchTo:"English",
+        accountLabel:"Smart-Account",
+        sessionActive:"Sesión activa",
+        accountNote:"Esta información pertenece a tu cuenta central de Smart-Account y se utiliza en los servicios conectados.",
+        heroTitle:"Administra tu cuenta",
+        heroSub:"Controla tu foto de perfil, contraseña y configuración de tu cuenta desde un solo lugar.",
+        pfpTitle:"Foto de perfil",
+        pfpSub:"Elige una nueva imagen JPG, PNG, WEBP o GIF (máximo 5 MB).",
+        pfpPick:"Elegir imagen",
+        pfpNone:"Ningún archivo seleccionado",
+        pfpBtn:"Cambiar foto",
+        passTitle:"Contraseña",
+        passSub:"Cambia la contraseña utilizada para iniciar sesión.",
+        current:"Contraseña actual",
+        newp:"Nueva contraseña",
+        confirm:"Confirmar nueva contraseña",
+        passBtn:"Cambiar contraseña",
+        accountSettingsTitle:"Cuenta",
+        accountSettingsSub:"Administra tu sesión y las acciones relacionadas con tu cuenta.",
+        logout:"Cerrar sesión",
+        deleteTitle:"Eliminar cuenta",
+        deleteSub:"Esto elimina permanentemente tu Smart-Account e invalida sus sesiones.",
+        deleteBtn:"Eliminar cuenta",
+        modalTitle:"¿Eliminar tu cuenta?",
+        modalText:"Esta acción es permanente. Escribe ELIMINAR para confirmar.",
+        deleteConfirmLabel:"Confirmación",
+        cancel:"Cancelar",
+        deletePermanent:"Eliminar permanentemente",
+        deleteWord:"ELIMINAR",
+
+        choose:"Selecciona una imagen.",
+        wrongFile:"Formato de imagen no permitido.",
+        tooBig:"La imagen no puede superar los 5 MB.",
+        preview:"Vista previa. Pulsa «Cambiar foto» para guardarla.",
+        uploading:"Subiendo imagen...",
+        pfpOk:"Foto de perfil actualizada correctamente.",
+        required:"Completa todos los campos.",
+        weak:"La nueva contraseña debe tener al menos 8 caracteres.",
+        tooLong:"La contraseña no puede superar los 50 caracteres.",
+        mismatch:"Las contraseñas no coinciden.",
+        same:"La nueva contraseña debe ser distinta de la actual.",
+        changing:"Cambiando contraseña...",
+        passOk:"Contraseña cambiada correctamente.",
+        deleting:"Eliminando cuenta...",
+        wrongWord:"Escribe ELIMINAR para confirmar.",
+        deleted:"Cuenta eliminada correctamente.",
+        network:"No se pudo conectar con Smart-Account. Revisa tu conexión e inténtalo de nuevo."
+    },
+
+    en:{
+        switchTo:"Español",
+        accountLabel:"Smart-Account",
+        sessionActive:"Active session",
+        accountNote:"This information belongs to your central Smart-Account and is used by connected services.",
+        heroTitle:"Manage your account",
+        heroSub:"Control your profile picture, password and account settings from one place.",
+        pfpTitle:"Profile picture",
+        pfpSub:"Choose a new JPG, PNG, WEBP or GIF image (max 5 MB).",
+        pfpPick:"Choose image",
+        pfpNone:"No file selected",
+        pfpBtn:"Change photo",
+        passTitle:"Password",
+        passSub:"Change the password used to sign in.",
+        current:"Current password",
+        newp:"New password",
+        confirm:"Confirm new password",
+        passBtn:"Change password",
+        accountSettingsTitle:"Account",
+        accountSettingsSub:"Manage your session and account-related actions.",
+        logout:"Sign out",
+        deleteTitle:"Delete account",
+        deleteSub:"This permanently deletes your Smart-Account and invalidates its sessions.",
+        deleteBtn:"Delete account",
+        modalTitle:"Delete your account?",
+        modalText:"This action is permanent. Type DELETE to confirm.",
+        deleteConfirmLabel:"Confirmation",
+        cancel:"Cancel",
+        deletePermanent:"Delete permanently",
+        deleteWord:"DELETE",
+
+        choose:"Select an image.",
+        wrongFile:"Image format is not allowed.",
+        tooBig:"The image cannot exceed 5 MB.",
+        preview:"Preview. Press “Change photo” to save it.",
+        uploading:"Uploading image...",
+        pfpOk:"Profile picture updated successfully.",
+        required:"Complete all fields.",
+        weak:"The new password must be at least 8 characters.",
+        tooLong:"The password cannot exceed 50 characters.",
+        mismatch:"Passwords do not match.",
+        same:"The new password must be different from the current one.",
+        changing:"Changing password...",
+        passOk:"Password changed successfully.",
+        deleting:"Deleting account...",
+        wrongWord:"Type DELETE to confirm.",
+        deleted:"Account deleted successfully.",
+        network:"Could not connect to Smart-Account. Check your connection and try again."
+    }
+
+};
+
+
+/* =========================================================
+   ESTADO / TEXTOS
+   ========================================================= */
+
+function setStatus(id, message, type = ""){
+
+    const element = $(id);
+
+    if(!element){
+        return;
+    }
+
+    element.textContent = message || "";
+
+    element.classList.remove("ok", "err");
+
+    if(type){
+        element.classList.add(type);
+    }
+}
+
+
+function applyLanguage(){
+
+    const t = T[lang];
+
+    document.documentElement.lang = lang;
+
+    document.querySelectorAll("[data-i18n]").forEach(element => {
+        element.textContent = t[element.dataset.i18n] || "";
+    });
+
+    $("langBtn").textContent = t.switchTo;
+
+    $("deleteConfirm").placeholder = t.deleteWord;
+
+    updateFileName();
+}
+
+
+function updateFileName(){
+
+    const file = $("pfpFile").files[0];
+
+    $("pfpFileName").textContent = file ? file.name : T[lang].pfpNone;
+}
+
+
+/* =========================================================
+   SESIÓN
+   ========================================================= */
+
+function clearSession(){
+
+    localStorage.removeItem(TOKEN_KEY);
+    localStorage.removeItem(USER_KEY);
+
+    token = "";
+}
+
+
+function redirectLogin(){
+
+    window.location.replace(
+        AUTH_PAGE +
+        "?redirect=" +
+        encodeURIComponent(window.location.href)
+    );
+}
+
+
+/*
+    Llamada a la API de Smart-Account.
+    - Envía el token como Smart-Token.
+    - Si la sesión caduca (401) te manda al login.
+      Con keepSession:true un 401 NO cierra la sesión
+      (por ejemplo, contraseña actual incorrecta).
+*/
+
+async function api(path, options = {}, keepSession = false){
+
+    let response;
+
+    try{
+
+        response = await fetch(API_URL + path, {
+            ...options,
+            headers:{
+                "Authorization": "Smart-Token " + token,
+                ...(options.headers || {})
+            }
+        });
+
+    }catch(error){
+
+        console.error(error);
+
+        throw new Error(T[lang].network);
+    }
+
+    const data = await response.json().catch(() => ({}));
+
+    if(response.status === 401 && !keepSession){
+
+        clearSession();
+        redirectLogin();
+
+        const redirected = new Error("redirect");
+        redirected.redirected = true;
+        throw redirected;
+    }
+
+    if(!response.ok){
+
+        throw new Error(
+            (typeof data.detail === "string" && data.detail) ||
+            T[lang].network
+        );
+    }
+
+    return data;
+}
+
+
+/* =========================================================
+   AVATAR
+   ========================================================= */
+
+function showAvatar(src, name){
+
+    const img = $("avatar");
+    const fallback = $("avatarFallback");
+
+    fallback.textContent = (name || "?").trim().charAt(0).toUpperCase() || "?";
+
+    if(!src){
+
+        img.hidden = true;
+        img.removeAttribute("src");
+        fallback.hidden = false;
+
+        return;
+    }
+
+    img.onerror = () => {
+
+        img.onerror = null;
+        img.hidden = true;
+        fallback.hidden = false;
+    };
+
+    img.onload = () => {
+
+        img.hidden = false;
+        fallback.hidden = true;
+    };
+
+    img.src = src;
+}
+
+
+function clearPreview(){
+
+    if(previewUrl){
+
+        URL.revokeObjectURL(previewUrl);
+        previewUrl = "";
+    }
+}
+
+
+/* =========================================================
+   CARGAR CUENTA
+   ========================================================= */
+
+async function loadAccount(){
+
+    if(!token){
+
+        redirectLogin();
+        return;
+    }
+
+    try{
+
+        const data = await api("/api/me");
+
+        const user = data.user || data;
+
+        $("username").textContent = user.username || "Usuario";
+
+        const pfp = user.pfp || user.profile_picture;
+
+        if(pfp){
+
+            // La foto nueva tiene nombre nuevo; el parámetro evita caché vieja
+            savedAvatar = /^https?:\/\//i.test(pfp)
+                ? pfp
+                : API_URL + pfp;
+
+        }else{
+
+            savedAvatar = "";
+        }
+
+        showAvatar(savedAvatar, user.username);
+
+    }catch(error){
+
+        if(error.redirected){
+            return;
+        }
+
+        console.error(error);
+
+        setStatus("deleteStatus", error.message, "err");
+    }
+}
+
+
+/* =========================================================
+   FOTO DE PERFIL
+   ========================================================= */
+
+function validateImage(file){
+
+    if(!IMAGE_TYPES.includes(file.type)){
+        return T[lang].wrongFile;
+    }
+
+    if(file.size > MAX_PFP){
+        return T[lang].tooBig;
+    }
+
+    return "";
+}
+
+
+function onFileChosen(){
+
+    setStatus("pfpStatus", "");
+
+    updateFileName();
+
+    clearPreview();
+
+    const file = $("pfpFile").files[0];
+
+    if(!file){
+
+        showAvatar(savedAvatar, $("username").textContent);
+        return;
+    }
+
+    const problem = validateImage(file);
+
+    if(problem){
+
+        $("pfpFile").value = "";
+        updateFileName();
+
+        showAvatar(savedAvatar, $("username").textContent);
+
+        setStatus("pfpStatus", problem, "err");
+
+        return;
+    }
+
+    previewUrl = URL.createObjectURL(file);
+
+    showAvatar(previewUrl, $("username").textContent);
+
+    setStatus("pfpStatus", T[lang].preview);
+}
+
+
+async function changePfp(){
+
+    setStatus("pfpStatus", "");
+
+    const file = $("pfpFile").files[0];
+
+    if(!file){
+
+        setStatus("pfpStatus", T[lang].choose, "err");
+        return;
+    }
+
+    const problem = validateImage(file);
+
+    if(problem){
+
+        setStatus("pfpStatus", problem, "err");
+        return;
+    }
+
+    const form = new FormData();
+
+    form.append("profile_picture", file);
+
+    $("pfpBtn").disabled = true;
+
+    setStatus("pfpStatus", T[lang].uploading);
+
+    try{
+
+        await api("/api/upload_pfp", {
+            method:"POST",
+            body:form
+        });
+
+        $("pfpFile").value = "";
+
+        clearPreview();
+
+        updateFileName();
+
+        await loadAccount();
+
+        setStatus("pfpStatus", T[lang].pfpOk, "ok");
+
+    }catch(error){
+
+        if(error.redirected){
+            return;
+        }
+
+        showAvatar(savedAvatar, $("username").textContent);
+
+        setStatus("pfpStatus", error.message, "err");
+
+    }finally{
+
+        $("pfpBtn").disabled = false;
+    }
+}
+
+
+/* =========================================================
+   CONTRASEÑA
+   ========================================================= */
+
+async function changePassword(){
+
+    const current = $("currentPassword").value;
+    const next = $("newPassword").value;
+    const confirm = $("confirmPassword").value;
+
+    setStatus("passStatus", "");
+
+    if(!current || !next || !confirm){
+
+        setStatus("passStatus", T[lang].required, "err");
+        return;
+    }
+
+    if(next.length < MIN_PASSWORD){
+
+        setStatus("passStatus", T[lang].weak, "err");
+        return;
+    }
+
+    if(next.length > MAX_PASSWORD || current.length > MAX_PASSWORD){
+
+        setStatus("passStatus", T[lang].tooLong, "err");
+        return;
+    }
+
+    if(next !== confirm){
+
+        setStatus("passStatus", T[lang].mismatch, "err");
+        return;
+    }
+
+    if(next === current){
+
+        setStatus("passStatus", T[lang].same, "err");
+        return;
+    }
+
+    const form = new FormData();
+
+    form.append("current_password", current);
+    form.append("new_password", next);
+
+    $("passBtn").disabled = true;
+
+    setStatus("passStatus", T[lang].changing);
+
+    try{
+
+        // keepSession: una contraseña actual incorrecta devuelve 401 y NO debe cerrar la sesión
+        const data = await api("/api/change-password", {
+            method:"POST",
+            body:form
+        }, true);
+
+        /*
+            Smart-Account cierra todas las sesiones al cambiar la contraseña
+            y entrega un token nuevo: se guarda para seguir con sesión iniciada
+            (también en el chat y en las llamadas).
+        */
+
+        if(data.token){
+
+            token = data.token;
+
+            localStorage.setItem(TOKEN_KEY, token);
+
+        }else{
+
+            clearSession();
+            redirectLogin();
+            return;
+        }
+
+        $("currentPassword").value = "";
+        $("newPassword").value = "";
+        $("confirmPassword").value = "";
+
+        setStatus("passStatus", T[lang].passOk, "ok");
+
+    }catch(error){
+
+        setStatus("passStatus", error.message, "err");
+
+    }finally{
+
+        $("passBtn").disabled = false;
+    }
+}
+
+
+/* =========================================================
+   ELIMINAR CUENTA
+   ========================================================= */
+
+function openDelete(){
+
+    $("deleteConfirm").value = "";
+
+    setStatus("modalStatus", "");
+
+    $("deleteModal").classList.add("open");
+
+    setTimeout(() => $("deleteConfirm").focus(), 50);
+}
+
+
+function closeDelete(){
+
+    $("deleteModal").classList.remove("open");
+}
+
+
+async function confirmDelete(){
+
+    const expected = T[lang].deleteWord;
+
+    if($("deleteConfirm").value.trim().toUpperCase() !== expected){
+
+        setStatus("modalStatus", T[lang].wrongWord, "err");
+        return;
+    }
+
+    $("confirmDelete").disabled = true;
+
+    setStatus("modalStatus", T[lang].deleting);
+
+    try{
+
+        await api("/api/account", { method:"DELETE" });
+
+        clearSession();
+
+        setStatus("modalStatus", T[lang].deleted, "ok");
+
+        setTimeout(() => window.location.replace(AUTH_PAGE), 1200);
+
+    }catch(error){
+
+        if(error.redirected){
+            return;
+        }
+
+        setStatus("modalStatus", error.message, "err");
+
+        $("confirmDelete").disabled = false;
+    }
+}
+
+
+/* =========================================================
+   LOGOUT
+   ========================================================= */
+
+async function logout(){
+
+    try{
+
+        if(token){
+
+            await fetch(API_URL + "/api/logout", {
+                method:"POST",
+                headers:{
+                    "Authorization": "Smart-Token " + token
+                }
+            });
+        }
+
+    }catch(error){
+
+        console.error(error);
+    }
+
+    clearSession();
+
+    redirectLogin();
+}
+
+
+/* =========================================================
+   EVENTOS
+   ========================================================= */
+
+$("langBtn").onclick = () => {
+
+    lang = lang === "es" ? "en" : "es";
+
+    localStorage.setItem(LANG_KEY, lang);
+
+    applyLanguage();
+
+    setStatus("pfpStatus", "");
+    setStatus("passStatus", "");
+    setStatus("deleteStatus", "");
+    setStatus("modalStatus", "");
+};
+
+$("pfpFile").onchange = onFileChosen;
+
+$("pfpBtn").onclick = changePfp;
+
+$("passBtn").onclick = changePassword;
+
+$("deleteBtn").onclick = openDelete;
+
+$("closeDelete").onclick = closeDelete;
+
+$("cancelDelete").onclick = closeDelete;
+
+$("confirmDelete").onclick = confirmDelete;
+
+$("deleteConfirm").addEventListener("keydown", event => {
+
+    if(event.key === "Enter"){
+        confirmDelete();
+    }
+});
+
+$("deleteModal").onclick = event => {
+
+    if(event.target === $("deleteModal")){
+        closeDelete();
+    }
+};
+
+document.addEventListener("keydown", event => {
+
+    if(event.key === "Escape"){
+        closeDelete();
+    }
+});
+
+$("logoutBtn").onclick = logout;
+
+
+/* =========================================================
+   INICIO
+   ========================================================= */
+
+$("year").textContent = new Date().getFullYear();
+
+applyLanguage();
+
+loadAccount();
+
+</script>
+
+</body>
+</html>

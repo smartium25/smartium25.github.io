@@ -11,6 +11,8 @@ const URLS = {
 
   sound: "https://smart-sound.trycloudflare.com",
 
+  ai: "https://smart-ai.trycloudflare.com",
+
   moderation: "https://moderation.trycloudflare.com",
 
   account: "https://titans-latter-opinions-invitations.trycloudflare.com",

@@ -1,0 +1,426 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Smart-Account</title>
+<style>
+* { box-sizing: border-box; margin: 0; padding: 0; font-family: "Segoe UI", Roboto, sans-serif; }
+
+body {
+    background: #121212; color: #fff; min-height: 100vh; padding: 20px;
+    display: flex; flex-direction: column; justify-content: center; align-items: center;
+}
+
+.card-container {
+    background: #1e1e1e; border: 1px solid #333; border-radius: 28px;
+    width: 100%; max-width: 1040px; min-height: 400px; padding: 40px;
+    display: grid; grid-template-columns: 1.1fr 0.8fr 1.1fr; gap: 24px; align-items: center;
+    box-shadow: 0 1px 3px rgba(0,0,0,0.35);
+}
+
+.card-left { display: flex; flex-direction: column; align-items: center; text-align: center; height: 100%; justify-content: center; }
+.brand { color: #00bcd4; font-size: 18px; font-weight: 600; margin-bottom: 24px; }
+h1 { font-size: 36px; font-weight: 400; margin-bottom: 16px; }
+.subtitle { font-size: 16px; line-height: 24px; color: #bdbdbd; }
+
+.card-center { display: flex; flex-direction: column; justify-content: center; align-items: center; gap: 16px; height: 100%; }
+.profile-sphere {
+    width: 150px; height: 150px; border-radius: 50%; overflow: hidden;
+    background: #2c2c2c; border: 1px solid #444; box-shadow: inset 0 2px 4px rgba(0,0,0,0.3);
+}
+.profile-sphere img { width: 100%; height: 100%; object-fit: cover; display: block; }
+
+.change-photo-btn {
+    background: #2c2c2c; color: #00bcd4; border: 1px solid #444; border-radius: 100px;
+    padding: 8px 16px; font-size: 13px; font-weight: 500; cursor: pointer;
+}
+.change-photo-btn:hover { background: #353535; }
+
+.card-right { display: flex; flex-direction: column; height: 100%; }
+form { width: 100%; height: 100%; display: flex; flex-direction: column; justify-content: center; }
+
+.input-group { position: relative; margin-bottom: 12px; width: 100%; }
+.input-group input {
+    width: 100%; padding: 20px 16px; font-size: 16px; color: #fff;
+    background: transparent; border: 1px solid #666; border-radius: 4px; outline: none;
+}
+.input-group input.has-toggle { padding-right: 92px; }
+.input-group input:focus { border-color: #00bcd4; box-shadow: 0 0 0 1px #00bcd4; }
+.input-group label {
+    position: absolute; left: 16px; top: 50%; transform: translateY(-50%);
+    background: #1e1e1e; padding: 0 4px; color: #aaa; font-size: 16px;
+    transition: 0.2s all; pointer-events: none;
+}
+.input-group input:focus ~ label,
+.input-group input:not(:placeholder-shown) ~ label { top: 0; font-size: 12px; color: #00bcd4; }
+
+.toggle-pass {
+    position: absolute; right: 8px; top: 50%; transform: translateY(-50%);
+    background: none; border: none; border-radius: 100px; padding: 6px 10px;
+    color: #00bcd4; font-size: 13px; font-weight: 500; cursor: pointer;
+}
+.toggle-pass:hover { background: #2c2c2c; }
+
+.link-text { background: none; border: none; color: #00bcd4; font-size: 14px; font-weight: 500; cursor: pointer; }
+.link-text:hover { text-decoration: underline; }
+
+.hint { font-size: 14px; line-height: 20px; color: #aaa; margin: 12px 0 24px; text-align: center; }
+.hint.tight { margin-bottom: 16px; }
+
+.action-buttons { display: flex; justify-content: center; align-items: center; gap: 24px; margin-top: 8px; }
+.btn-next {
+    background: #00bcd4; color: #000; border: none; border-radius: 100px;
+    height: 40px; padding: 0 24px; font-size: 14px; font-weight: 500; cursor: pointer;
+}
+.btn-next:hover { background: #00a5bb; }
+.btn-next:disabled { opacity: 0.6; cursor: not-allowed; }
+
+button:focus-visible { outline: 2px solid #00bcd4; outline-offset: 2px; }
+
+.footer-container {
+    width: 100%; max-width: 1040px; margin-top: 24px; padding: 0 16px;
+    display: flex; justify-content: space-between; align-items: center; font-size: 12px; color: #777;
+}
+
+.hidden-flow { display: none !important; }
+
+.message-box { display: none; width: 100%; padding: 12px 14px; margin-bottom: 14px; border-radius: 10px; font-size: 14px; line-height: 20px; text-align: center; }
+.message-box.error { background: #2a1717; border: 1px solid #7a3030; color: #ff8a80; }
+.message-box.success { background: #17251a; border: 1px solid #365f3d; color: #81c784; }
+
+@media (max-width: 900px) {
+    .card-container { grid-template-columns: 1fr; gap: 32px; padding: 28px; }
+    .card-center { order: -1; }
+}
+</style>
+</head>
+<body>
+
+<main class="card-container">
+
+    <div class="card-left">
+        <div class="brand">Smart-Account</div>
+        <h1 id="flow-title">Iniciar sesión</h1>
+        <p class="subtitle" id="flow-subtitle">Entra con tu Smart-Account y úsala como quieras. Las cuentas creadas en septiembre o antes ya no funcionan.</p>
+    </div>
+
+    <div class="card-center">
+        <div class="profile-sphere">
+            <img id="avatar-preview" alt="Foto de perfil"
+                 src="data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='%239aa0a6'><path d='M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm0 3c1.66 0 3 1.34 3 3s-1.34 3-3 3-3-1.34-3-3 1.34-3 3-3zm0 14.2c-2.5 0-4.71-1.28-6-3.22.03-1.99 4-3.08 6-3.08 1.99 0 5.97 1.09 6 3.08-1.29 1.94-3.5 3.22-6 3.22z'/></svg>">
+        </div>
+
+        <input type="file" id="file-input" accept="image/jpeg,image/png,image/webp,image/gif" hidden>
+        <button type="button" id="photo-btn" class="change-photo-btn hidden-flow">Elegir foto de perfil</button>
+    </div>
+
+    <div class="card-right">
+
+        <!-- INICIO DE SESIÓN -->
+        <form id="signin-form" novalidate>
+            <div id="login-message" class="message-box" role="alert"></div>
+
+            <div class="input-group">
+                <input type="text" id="identifier" placeholder=" " autocomplete="username" autocapitalize="none" spellcheck="false">
+                <label for="identifier">Nombre de usuario</label>
+            </div>
+
+            <div class="input-group">
+                <input type="password" id="signin-password" class="has-toggle" placeholder=" " autocomplete="current-password">
+                <label for="signin-password">Contraseña</label>
+                <button type="button" class="toggle-pass" data-target="signin-password" aria-pressed="false">Mostrar</button>
+            </div>
+
+            <p class="hint">Nunca compartas tu contraseña. Tu nombre de usuario no debe revelar quién eres.</p>
+
+            <div class="action-buttons">
+                <button type="button" id="go-to-signup" class="link-text">Crear cuenta</button>
+                <button type="submit" id="login-button" class="btn-next">Siguiente</button>
+            </div>
+        </form>
+
+        <!-- REGISTRO -->
+        <form id="signup-form" class="hidden-flow" novalidate>
+            <div id="signup-message" class="message-box" role="alert"></div>
+
+            <div class="input-group">
+                <input type="text" id="username" placeholder=" " autocomplete="username" autocapitalize="none" spellcheck="false" maxlength="20">
+                <label for="username">Nombre de usuario</label>
+            </div>
+
+            <div class="input-group">
+                <input type="password" id="signup-password" class="has-toggle" placeholder=" " autocomplete="new-password">
+                <label for="signup-password">Contraseña</label>
+                <button type="button" class="toggle-pass" data-target="signup-password" aria-pressed="false">Mostrar</button>
+            </div>
+
+            <p class="hint tight">Usuario de 3 a 20 caracteres: letras, números, guion y guion bajo. La contraseña debe tener al menos 8 caracteres.</p>
+
+            <div class="action-buttons">
+                <button type="button" id="go-to-signin" class="link-text">Iniciar sesión</button>
+                <button type="submit" id="signup-button" class="btn-next">Siguiente</button>
+            </div>
+        </form>
+
+    </div>
+</main>
+
+<footer class="footer-container">
+    <div>Español (América Latina)</div>
+</footer>
+    
+<script src="./url.js"></script>
+    
+<script>
+// ===================== CONFIGURACIÓN =====================
+const API_URL = URLS.account;
+const TOKEN_KEY = "smart_token";
+const USER_KEY = "smart_user";
+
+// Solo se redirige a este dominio (agrega aquí otro si algún día cambias de dominio).
+const ALLOWED_REDIRECT_HOSTS = ["smartium25.github.io"];
+
+const MAX_PFP = 5 * 1024 * 1024;
+const IMAGE_TYPES = ["image/jpeg", "image/png", "image/webp", "image/gif"];
+const USERNAME_RE = /^[a-zA-Z0-9_-]{3,20}$/;
+const NET_ERROR = "No se pudo conectar con Smart-Account. Revisa tu conexión e inténtalo de nuevo.";
+
+// ===================== ELEMENTOS =====================
+const $ = (id) => document.getElementById(id);
+const sf = $("signin-form"), uf = $("signup-form");
+const avatar = $("avatar-preview"), fileInput = $("file-input"), photoBtn = $("photo-btn");
+const loginMsg = $("login-message"), signupMsg = $("signup-message");
+const loginBtn = $("login-button"), signupBtn = $("signup-button");
+const DEFAULT_AVATAR = avatar.src;
+const LOGIN_SUBTITLE = $("flow-subtitle").textContent.trim();
+const SIGNUP_SUBTITLE = "Crea tu Smart-Account y disfruta gratis de todos los beneficios del ecosistema Smart.";
+
+// ===================== UTILIDADES =====================
+function showMessage(el, text, type = "error") {
+    el.textContent = text;
+    el.className = "message-box " + type;
+    el.style.display = "block";
+}
+
+function hideMessage(el) {
+    el.textContent = "";
+    el.style.display = "none";
+}
+
+function setBusy(btn, busy, text) {
+    btn.disabled = busy;
+    btn.textContent = text;
+}
+
+function errorText(data, fallback) {
+    const d = data && data.detail;
+    if (typeof d === "string") return d;
+    if (Array.isArray(d)) return d.map((i) => i.msg || String(i)).join(" • ");
+    return fallback;
+}
+
+async function api(path, options = {}) {
+    const ctrl = new AbortController();
+    const timer = setTimeout(() => ctrl.abort(), 15000);
+    try {
+        const res = await fetch(API_URL + path, { ...options, signal: ctrl.signal });
+        let data = {};
+        try { data = await res.json(); } catch { /* respuesta sin JSON */ }
+        return { ok: res.ok, status: res.status, data };
+    } finally {
+        clearTimeout(timer);
+    }
+}
+
+function pfpUrl(value) {
+    if (!value) return DEFAULT_AVATAR;
+    if (/^(https?:|data:)/.test(value)) return value;
+    return API_URL + value;
+}
+
+function saveSession(data) {
+    localStorage.setItem(TOKEN_KEY, data.token);
+    if (data.user) {
+        localStorage.setItem(USER_KEY, JSON.stringify(data.user));
+        const pfp = data.user.pfp || data.user.profile_picture;
+        if (pfp) avatar.src = pfpUrl(pfp);
+    }
+}
+
+// Solo acepta destinos https (o http en localhost) de dominios permitidos.
+function getSafeRedirect() {
+    const raw = new URLSearchParams(location.search).get("redirect");
+    if (!raw) return "";
+    try {
+        const url = new URL(raw, location.href);
+        const local = url.hostname === "localhost" || url.hostname === "127.0.0.1";
+        const okProtocol = url.protocol === "https:" || (local && url.protocol === "http:");
+        return okProtocol && ALLOWED_REDIRECT_HOSTS.includes(url.hostname) ? url.href : "";
+    } catch {
+        return "";
+    }
+}
+const redirectUrl = getSafeRedirect();
+
+// ===================== VISTAS =====================
+function showView(mode) {
+    const signup = mode === "signup";
+    sf.classList.toggle("hidden-flow", signup);
+    uf.classList.toggle("hidden-flow", !signup);
+    photoBtn.classList.toggle("hidden-flow", !signup);
+    $("flow-title").textContent = signup ? "Crear cuenta" : "Iniciar sesión";
+    $("flow-subtitle").textContent = signup ? SIGNUP_SUBTITLE : LOGIN_SUBTITLE;
+    hideMessage(loginMsg);
+    hideMessage(signupMsg);
+}
+
+$("go-to-signup").addEventListener("click", () => showView("signup"));
+$("go-to-signin").addEventListener("click", () => showView("signin"));
+
+// ===================== MOSTRAR / OCULTAR CONTRASEÑA =====================
+document.querySelectorAll(".toggle-pass").forEach((btn) => {
+    btn.addEventListener("click", () => {
+        const input = $(btn.dataset.target);
+        const reveal = input.type === "password";
+        input.type = reveal ? "text" : "password";
+        btn.textContent = reveal ? "Ocultar" : "Mostrar";
+        btn.setAttribute("aria-pressed", String(reveal));
+    });
+});
+
+// ===================== FOTO DE PERFIL =====================
+let previewUrl = null;
+
+function rejectPhoto(message) {
+    fileInput.value = "";
+    avatar.src = DEFAULT_AVATAR;
+    showMessage(signupMsg, message);
+}
+
+photoBtn.addEventListener("click", () => fileInput.click());
+
+fileInput.addEventListener("change", () => {
+    const file = fileInput.files[0];
+    if (!file) return;
+    hideMessage(signupMsg);
+
+    if (!IMAGE_TYPES.includes(file.type)) return rejectPhoto("Formato no permitido. Usa JPG, PNG, WEBP o GIF.");
+    if (file.size > MAX_PFP) return rejectPhoto("La foto no puede superar los 5 MB.");
+
+    if (previewUrl) URL.revokeObjectURL(previewUrl);
+    previewUrl = URL.createObjectURL(file);
+    avatar.src = previewUrl;
+});
+
+avatar.addEventListener("error", () => {
+    if (previewUrl && avatar.src === previewUrl) {
+        previewUrl = null;
+        rejectPhoto("No se pudo leer la imagen. Elige otra foto.");
+    }
+});
+
+// ===================== INICIAR SESIÓN =====================
+sf.addEventListener("submit", async (e) => {
+    e.preventDefault();
+    hideMessage(loginMsg);
+
+    const user = $("identifier").value.trim();
+    const password = $("signin-password").value;
+
+    if (!user || !password) return showMessage(loginMsg, "Completa todos los campos.");
+    if (user.includes("@")) return showMessage(loginMsg, "Escribe tu nombre de usuario, no un correo.");
+
+    setBusy(loginBtn, true, "Entrando...");
+    try {
+        const form = new FormData();
+        form.append("username", user);
+        form.append("password", password);
+
+        const { ok, data } = await api("/api/login", { method: "POST", body: form });
+        if (!ok) return showMessage(loginMsg, errorText(data, "No se pudo iniciar sesión."));
+        if (!data.token) return showMessage(loginMsg, "La API no devolvió el Smart-Token.");
+
+        saveSession(data);
+        if (redirectUrl) return location.replace(redirectUrl);
+        showMessage(loginMsg, "Inicio de sesión correcto.", "success");
+    } catch {
+        showMessage(loginMsg, NET_ERROR);
+    } finally {
+        setBusy(loginBtn, false, "Siguiente");
+    }
+});
+
+// ===================== REGISTRO =====================
+uf.addEventListener("submit", async (e) => {
+    e.preventDefault();
+    hideMessage(signupMsg);
+
+    const name = $("username").value.trim();
+    const password = $("signup-password").value;
+    const photo = fileInput.files[0];
+
+    if (!name || !password) return showMessage(signupMsg, "Completa todos los campos.");
+    if (!USERNAME_RE.test(name)) return showMessage(signupMsg, "El usuario debe tener de 3 a 20 caracteres: letras, números, guion o guion bajo.");
+    if (password.length < 8) return showMessage(signupMsg, "La contraseña debe tener al menos 8 caracteres.");
+    if (password.length > 128) return showMessage(signupMsg, "La contraseña es demasiado larga (máximo 128 caracteres).");
+    if (!photo) return showMessage(signupMsg, "Elige una foto de perfil.");
+
+    setBusy(signupBtn, true, "Creando...");
+    try {
+        const form = new FormData();
+        form.append("username", name);
+        form.append("password", password);
+        form.append("profile_picture", photo);
+
+        const { ok, data } = await api("/api/register", { method: "POST", body: form });
+        if (!ok) return showMessage(signupMsg, errorText(data, "No se pudo crear la cuenta."));
+        if (!data.token) return showMessage(signupMsg, "Cuenta creada, pero la API no devolvió el Smart-Token. Inicia sesión.");
+
+        saveSession(data);
+        if (redirectUrl) {
+            showMessage(signupMsg, "Cuenta creada. Redirigiendo...", "success");
+            setTimeout(() => location.replace(redirectUrl), 500);
+            return;
+        }
+        showMessage(signupMsg, "Cuenta creada correctamente.", "success");
+    } catch {
+        showMessage(signupMsg, NET_ERROR);
+    } finally {
+        setBusy(signupBtn, false, "Siguiente");
+    }
+});
+
+// ===================== SESIÓN EXISTENTE =====================
+async function checkExistingSession() {
+    const token = localStorage.getItem(TOKEN_KEY);
+    if (!token) return;
+
+    try {
+        const { ok, status, data } = await api("/api/me", {
+            headers: { Authorization: "Smart-Token " + token }
+        });
+
+        if (!ok) {
+            if (status === 401) {
+                localStorage.removeItem(TOKEN_KEY);
+                localStorage.removeItem(USER_KEY);
+            }
+            return;
+        }
+
+        if (data.user) {
+            localStorage.setItem(USER_KEY, JSON.stringify(data.user));
+            const pfp = data.user.pfp || data.user.profile_picture;
+            if (pfp) avatar.src = pfpUrl(pfp);
+        }
+        if (redirectUrl) location.replace(redirectUrl);
+    } catch {
+        /* sin conexión: se deja el formulario disponible */
+    }
+}
+
+checkExistingSession();
+</script>
+</body>
+</html>

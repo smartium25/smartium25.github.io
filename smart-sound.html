@@ -1,0 +1,3222 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1.0">
+<title>Smart-Sound</title>
+
+<script src="./url.js"></script>
+
+<script>
+// ==========================================================
+// CONFIGURACIÓN  (aquí cambias las URLs, los banners y los límites)
+// ==========================================================
+
+// Las URLs se cambian en url.js (misma carpeta que este HTML)
+
+// Dirección de esta API (Smart-Sound, el api.py de música, puerto 8005)
+const API = URLS.sound;
+
+// Dirección de la API de Smart-Account (sirve las fotos de perfil: /pfp/...)
+const KN_AUTH_API = URLS.account;
+
+// Página de inicio de sesión
+const AUTH_URL = URLS.auth;
+
+// Nombre con el que la página de login guarda el token en el navegador
+const TOKEN_KEY = "smart_token";
+
+// Canciones que se cargan cada vez (máximo 100 en el api.py)
+const PAGE_SIZE = 50;
+
+// Espera (ms) después de escribir en el buscador antes de buscar
+const SEARCH_DELAY_MS = 300;
+
+// Formatos de audio y límites (si la API responde, usa sus propios límites)
+const AUDIO_EXTENSIONS = [".mp3", ".wav", ".ogg", ".opus", ".flac", ".m4a", ".aac", ".webm"];
+const DEFAULT_MAX_TRACK_BYTES = 200 * 1024 * 1024;
+const COVER_EXTENSIONS = [".jpg", ".jpeg", ".png", ".webp"];
+const MAX_COVER_BYTES = 5 * 1024 * 1024;
+
+// Volumen guardado en el navegador
+const VOLUME_KEY = "smartsound_volume";
+
+// Banners (están en la misma carpeta que este HTML)
+const BANNERS = [
+  { name: "Banner 1", file: "banner1.png" },
+  { name: "Banner 2", file: "banner2.png" },
+  { name: "Banner 3", file: "banner3.png" }
+];
+
+// Oscurecimiento sobre el banner para que el texto se lea (0 = nada, 1 = negro)
+const BANNER_DIM = 0.35;
+
+// Foto personalizada: lado máximo en píxeles y calidad JPEG (0 a 1)
+const CUSTOM_BANNER_MAX_SIDE = 1600;
+const CUSTOM_BANNER_QUALITY = 0.82;
+
+// Prefijo con el que se guarda el banner elegido (uno por usuario)
+const BANNER_STORAGE_PREFIX = "smartsound_banner_";
+</script>
+
+<style>
+:root{
+  --bg:#252a33;
+  --panel:#272d37;
+  --card:#303640;
+  --cyan:#00f0ff;
+  --cyan2:#00c8d7;
+  --text:#f5f7fa;
+  --muted:#9aa4b2;
+  --green:#35d06f;
+  --red:#ff5b67;
+  --border:#3b424d;
+}
+
+*{
+  box-sizing:border-box;
+  margin:0;
+  padding:0;
+}
+
+html,
+body{
+  width:100%;
+  height:100%;
+  overflow:hidden;
+}
+
+body{
+  font-family:Segoe UI,Arial,sans-serif;
+  background:var(--bg);
+  color:var(--text);
+}
+
+button,
+input,
+select,
+textarea{
+  font:inherit;
+}
+
+button{
+  border:0;
+  cursor:pointer;
+}
+
+button:disabled{
+  opacity:.55;
+  cursor:not-allowed;
+}
+
+/* =========================================================
+   APP
+========================================================= */
+
+.app{
+  width:100%;
+  height:100vh;
+  display:grid;
+  grid-template-columns:minmax(240px,300px) 1fr;
+  grid-template-rows:minmax(0,1fr) auto;
+  gap:1px;
+  background:var(--border);
+}
+
+.panel{
+  background:var(--panel);
+  padding:16px;
+  min-width:0;
+  display:flex;
+  flex-direction:column;
+  overflow:auto;
+}
+
+.title{
+  color:var(--cyan);
+  background:var(--card);
+  border-radius:12px;
+  padding:12px 14px;
+  text-align:center;
+  font-weight:700;
+  margin-bottom:12px;
+}
+
+.scroll{
+  flex:1;
+  min-height:0;
+  overflow:auto;
+  padding-right:2px;
+}
+
+.scroll::-webkit-scrollbar,
+.panel::-webkit-scrollbar,
+.modal-card::-webkit-scrollbar{
+  width:7px;
+}
+
+.scroll::-webkit-scrollbar-thumb,
+.panel::-webkit-scrollbar-thumb,
+.modal-card::-webkit-scrollbar-thumb{
+  background:#46505c;
+  border-radius:9px;
+}
+
+/* =========================================================
+   SIDEBAR
+========================================================= */
+
+.me-box{
+  display:flex;
+  align-items:center;
+  gap:12px;
+  background:var(--card);
+  border-radius:12px;
+  padding:12px;
+  margin-bottom:12px;
+}
+
+.me-box img{
+  width:52px;
+  height:52px;
+  border-radius:50%;
+  object-fit:cover;
+  border:2px solid var(--cyan);
+  background:#171b21;
+  flex:none;
+}
+
+.me-name{
+  min-width:0;
+  font-weight:700;
+  overflow:hidden;
+  text-overflow:ellipsis;
+  white-space:nowrap;
+}
+
+.storage{
+  background:var(--card);
+  border-radius:12px;
+  padding:12px;
+  margin-bottom:12px;
+}
+
+.storage-label{
+  color:var(--muted);
+  font-size:12px;
+  margin-bottom:8px;
+}
+
+.bar{
+  height:8px;
+  border-radius:99px;
+  background:#1e232b;
+  overflow:hidden;
+}
+
+.bar i{
+  display:block;
+  height:100%;
+  width:0;
+  border-radius:99px;
+  background:linear-gradient(90deg,var(--cyan2),var(--cyan));
+  transition:width .3s;
+}
+
+.bar i.full{
+  background:linear-gradient(90deg,#ff8a5b,var(--red));
+}
+
+.storage-text{
+  margin-top:8px;
+  font-size:13px;
+  font-weight:600;
+}
+
+.storage-sub{
+  margin-top:3px;
+  font-size:12px;
+  color:var(--muted);
+}
+
+.primary-btn{
+  background:var(--cyan);
+  color:#081013;
+  font-weight:700;
+  border-radius:9px;
+  padding:11px 12px;
+}
+
+.primary-btn:hover:not(:disabled){
+  background:#5ff6ff;
+}
+
+.side-btn,
+.secondary-btn{
+  background:#454c57;
+  color:#fff;
+  font-weight:700;
+  border-radius:9px;
+  padding:11px 12px;
+}
+
+.side-btn:hover,
+.secondary-btn:hover{
+  background:#515a66;
+}
+
+.danger-btn{
+  background:var(--red);
+  color:#fff;
+  font-weight:700;
+  border-radius:9px;
+  padding:11px 12px;
+}
+
+.danger-btn:hover{
+  filter:brightness(1.08);
+}
+
+.full{
+  width:100%;
+  margin-bottom:9px;
+}
+
+.spacer{
+  flex:1;
+}
+
+/* =========================================================
+   CENTER
+========================================================= */
+
+.center{
+  background:#21262e;
+  background-size:cover;
+  background-position:center;
+  background-repeat:no-repeat;
+  min-width:0;
+  min-height:0;
+  display:flex;
+  flex-direction:column;
+  overflow:hidden;
+}
+
+.toolbar{
+  flex:none;
+  display:flex;
+  align-items:center;
+  gap:9px;
+  flex-wrap:wrap;
+  padding:12px 14px;
+  background:var(--card);
+}
+
+.search{
+  flex:1;
+  min-width:160px;
+  background:#1e232b;
+  color:var(--text);
+  border:1px solid #434b56;
+  border-radius:9px;
+  padding:10px 12px;
+  outline:none;
+}
+
+.search:focus,
+select:focus,
+.field input:focus,
+.field textarea:focus{
+  border-color:var(--cyan);
+}
+
+select{
+  background:#1e232b;
+  color:var(--text);
+  border:1px solid #434b56;
+  border-radius:9px;
+  padding:10px 10px;
+  outline:none;
+}
+
+.order-btn{
+  background:#454c57;
+  color:#fff;
+  border-radius:9px;
+  width:40px;
+  height:40px;
+  flex:none;
+}
+
+.order-btn:hover{
+  background:#515a66;
+}
+
+.count{
+  color:var(--muted);
+  font-size:12px;
+  flex:none;
+}
+
+.list{
+  padding:14px;
+}
+
+.row{
+  display:flex;
+  align-items:center;
+  gap:12px;
+  background:var(--card);
+  border-radius:12px;
+  padding:9px 12px;
+  margin-bottom:8px;
+  cursor:pointer;
+  border:1px solid transparent;
+}
+
+.row:hover{
+  background:#353c47;
+}
+
+.row.playing{
+  border-color:rgba(0,240,255,.45);
+  background:#2c3a43;
+}
+
+.row-icon{
+  width:42px;
+  height:42px;
+  border-radius:10px;
+  display:grid;
+  place-items:center;
+  font-size:20px;
+  background:#1e232b;
+  flex:none;
+  color:var(--cyan);
+}
+
+.eq{
+  display:flex;
+  align-items:flex-end;
+  gap:3px;
+  height:18px;
+}
+
+.eq i{
+  width:4px;
+  background:var(--cyan);
+  border-radius:2px;
+  height:30%;
+  animation:eq 0.9s ease-in-out infinite;
+}
+
+.eq i:nth-child(2){
+  animation-delay:.2s;
+}
+
+.eq i:nth-child(3){
+  animation-delay:.4s;
+}
+
+.eq.paused i{
+  animation-play-state:paused;
+}
+
+@keyframes eq{
+  0%,100%{height:25%;}
+  50%{height:100%;}
+}
+
+.row-main{
+  min-width:0;
+  flex:1;
+}
+
+.row-title{
+  font-weight:600;
+  overflow:hidden;
+  text-overflow:ellipsis;
+  white-space:nowrap;
+}
+
+.row-sub{
+  margin-top:3px;
+  font-size:12px;
+  color:var(--muted);
+  overflow:hidden;
+  text-overflow:ellipsis;
+  white-space:nowrap;
+}
+
+.row-extra{
+  flex:none;
+  width:140px;
+  font-size:12px;
+  color:var(--muted);
+  overflow:hidden;
+  text-overflow:ellipsis;
+  white-space:nowrap;
+}
+
+.row-size{
+  flex:none;
+  width:70px;
+  text-align:right;
+  font-size:12px;
+  color:var(--muted);
+}
+
+.row-actions{
+  display:flex;
+  gap:6px;
+  flex:none;
+}
+
+.icon-btn{
+  width:34px;
+  height:34px;
+  border-radius:9px;
+  background:#454c57;
+  color:#fff;
+  font-size:15px;
+}
+
+.icon-btn:hover{
+  background:#515a66;
+}
+
+.icon-btn.del:hover{
+  background:var(--red);
+}
+
+.empty{
+  color:var(--muted);
+  font-size:13px;
+  padding:34px 8px;
+  text-align:center;
+  line-height:1.6;
+}
+
+.more-btn{
+  display:block;
+  margin:6px auto 0;
+  background:#454c57;
+  color:#fff;
+  font-weight:700;
+  border-radius:9px;
+  padding:10px 22px;
+}
+
+.more-btn:hover{
+  background:#515a66;
+}
+
+/* =========================================================
+   REPRODUCTOR
+========================================================= */
+
+.player{
+  grid-column:1 / -1;
+  background:var(--panel);
+  display:grid;
+  grid-template-columns:minmax(180px,1fr) minmax(280px,2fr) minmax(120px,1fr);
+  align-items:center;
+  gap:16px;
+  padding:10px 16px;
+}
+
+.now{
+  display:flex;
+  align-items:center;
+  gap:12px;
+  min-width:0;
+}
+
+.cover{
+  width:56px;
+  height:56px;
+  border-radius:10px;
+  background:#1e232b;
+  display:grid;
+  place-items:center;
+  font-size:24px;
+  color:var(--cyan);
+  overflow:hidden;
+  flex:none;
+}
+
+.cover img{
+  width:100%;
+  height:100%;
+  object-fit:cover;
+  display:block;
+}
+
+.now-text{
+  min-width:0;
+}
+
+.now-title{
+  font-weight:700;
+  overflow:hidden;
+  text-overflow:ellipsis;
+  white-space:nowrap;
+}
+
+.now-sub{
+  margin-top:3px;
+  font-size:12px;
+  color:var(--muted);
+  overflow:hidden;
+  text-overflow:ellipsis;
+  white-space:nowrap;
+}
+
+.transport{
+  display:flex;
+  flex-direction:column;
+  gap:6px;
+  min-width:0;
+}
+
+.controls{
+  display:flex;
+  justify-content:center;
+  align-items:center;
+  gap:10px;
+}
+
+.ctl{
+  width:36px;
+  height:36px;
+  border-radius:50%;
+  background:transparent;
+  color:#fff;
+  font-size:16px;
+}
+
+.ctl:hover:not(:disabled){
+  background:#454c57;
+}
+
+.ctl.on{
+  color:var(--cyan);
+}
+
+.ctl.play{
+  width:44px;
+  height:44px;
+  background:var(--cyan);
+  color:#081013;
+  font-size:18px;
+}
+
+.ctl.play:hover:not(:disabled){
+  background:#5ff6ff;
+}
+
+.seek{
+  display:flex;
+  align-items:center;
+  gap:9px;
+  font-size:11px;
+  color:var(--muted);
+}
+
+.seek span{
+  width:38px;
+  text-align:center;
+  flex:none;
+}
+
+input[type=range]{
+  flex:1;
+  min-width:0;
+  accent-color:var(--cyan);
+  cursor:pointer;
+}
+
+.volume{
+  display:flex;
+  align-items:center;
+  gap:8px;
+  justify-content:flex-end;
+}
+
+.volume input{
+  max-width:120px;
+}
+
+/* =========================================================
+   MODALES
+========================================================= */
+
+.modal{
+  position:fixed;
+  inset:0;
+  background:rgba(10,12,16,.72);
+  display:none;
+  align-items:center;
+  justify-content:center;
+  padding:16px;
+  z-index:30;
+}
+
+.modal.show{
+  display:flex;
+}
+
+.modal-card{
+  width:100%;
+  max-width:560px;
+  max-height:92vh;
+  overflow:auto;
+  background:var(--panel);
+  border:1px solid var(--border);
+  border-radius:14px;
+  padding:16px;
+}
+
+.modal-card.small{
+  max-width:420px;
+}
+
+.dlg-text{
+  color:var(--muted);
+  font-size:14px;
+  line-height:1.5;
+  margin-bottom:12px;
+}
+
+.dlg-text:empty{
+  display:none;
+}
+
+.field{
+  margin-bottom:10px;
+}
+
+.field label{
+  display:block;
+  font-size:12px;
+  color:var(--muted);
+  margin-bottom:5px;
+}
+
+.field input[type=text],
+.field textarea{
+  width:100%;
+  background:#1e232b;
+  color:var(--text);
+  border:1px solid #434b56;
+  border-radius:9px;
+  padding:10px 12px;
+  outline:none;
+}
+
+.field textarea{
+  resize:vertical;
+  min-height:70px;
+}
+
+.field input[type=file]{
+  width:100%;
+  font-size:13px;
+  color:var(--muted);
+}
+
+.two{
+  display:grid;
+  grid-template-columns:1fr 1fr;
+  gap:10px;
+}
+
+.cover-row{
+  display:flex;
+  align-items:center;
+  gap:12px;
+}
+
+.cover-preview{
+  width:64px;
+  height:64px;
+  border-radius:10px;
+  background:#1e232b;
+  display:grid;
+  place-items:center;
+  font-size:24px;
+  color:var(--muted);
+  overflow:hidden;
+  flex:none;
+}
+
+.cover-preview img{
+  width:100%;
+  height:100%;
+  object-fit:cover;
+}
+
+.status-box{
+  display:none;
+  margin-bottom:10px;
+  padding:10px 12px;
+  border-radius:10px;
+  font-size:13px;
+}
+
+.status-box.show{
+  display:block;
+}
+
+.status-box.err{
+  background:#3b2428;
+  color:#ffafb5;
+  border:1px solid #70434a;
+}
+
+.status-box.info{
+  background:#1e2a33;
+  color:#bffaff;
+  border:1px solid #2f4350;
+}
+
+.progress{
+  display:none;
+  margin-bottom:10px;
+}
+
+.progress.show{
+  display:block;
+}
+
+.progress .bar{
+  height:8px;
+}
+
+.progress-text{
+  margin-top:6px;
+  font-size:12px;
+  color:var(--muted);
+}
+
+.modal-actions{
+  display:flex;
+  gap:9px;
+  flex-wrap:wrap;
+  margin-top:6px;
+}
+
+.modal-actions button{
+  flex:1;
+  min-width:110px;
+}
+
+/* ---------- Banners ---------- */
+
+.banner-grid{
+  display:grid;
+  grid-template-columns:repeat(auto-fill,minmax(150px,1fr));
+  gap:10px;
+  margin-bottom:14px;
+}
+
+.banner-opt{
+  background:var(--card);
+  border:2px solid transparent;
+  border-radius:12px;
+  padding:6px;
+  color:var(--text);
+  text-align:center;
+  font-size:12px;
+  font-weight:600;
+}
+
+.banner-opt:hover{
+  background:#353c47;
+}
+
+.banner-opt.active{
+  border-color:var(--cyan);
+}
+
+.banner-opt img,
+.banner-opt .banner-none{
+  display:block;
+  width:100%;
+  height:80px;
+  object-fit:cover;
+  border-radius:8px;
+  margin-bottom:6px;
+  background:#21262e;
+}
+
+.banner-opt .banner-none{
+  display:flex;
+  align-items:center;
+  justify-content:center;
+  color:var(--muted);
+  font-size:11px;
+}
+
+.toast{
+  position:fixed;
+  left:50%;
+  bottom:96px;
+  transform:translateX(-50%);
+  background:#1d2128;
+  border:1px solid #414954;
+  color:#fff;
+  padding:9px 13px;
+  border-radius:9px;
+  font-size:12px;
+  display:none;
+  z-index:40;
+  max-width:90vw;
+}
+
+.toast.show{
+  display:block;
+}
+
+/* =========================================================
+   RESPONSIVE
+========================================================= */
+
+@media(max-width:900px){
+
+  .row-extra{
+    display:none;
+  }
+
+  .player{
+    grid-template-columns:minmax(150px,1fr) minmax(220px,2fr);
+  }
+
+  .volume{
+    display:none;
+  }
+}
+
+@media(max-width:800px){
+
+  .app{
+    grid-template-columns:1fr;
+    grid-template-rows:auto minmax(0,1fr) auto;
+  }
+
+  .panel{
+    padding:12px;
+    max-height:44vh;
+  }
+
+  .panel .title,
+  .spacer{
+    display:none;
+  }
+
+  .side-grid{
+    display:grid;
+    grid-template-columns:1fr 1fr;
+    gap:8px;
+  }
+
+  .side-grid .full{
+    margin-bottom:0;
+  }
+
+  .me-box,
+  .storage{
+    margin-bottom:8px;
+  }
+}
+
+@media(max-width:600px){
+
+  .row-size{
+    display:none;
+  }
+
+  .player{
+    grid-template-columns:1fr;
+    gap:8px;
+    padding:8px 12px;
+  }
+
+  .cover{
+    width:44px;
+    height:44px;
+  }
+
+  .row-actions .icon-btn.sec{
+    display:none;
+  }
+
+  .two{
+    grid-template-columns:1fr;
+  }
+}
+</style>
+</head>
+
+<body>
+
+<div class="app" id="app" style="display:none;">
+
+  <!-- SIDEBAR -->
+
+  <aside class="panel">
+
+    <div class="title">
+      Smart-Sound
+    </div>
+
+    <div class="me-box">
+
+      <img
+        id="mypfp"
+        src="https://via.placeholder.com/52"
+        alt="Foto de perfil"
+      >
+
+      <div
+        id="me"
+        class="me-name"
+      ></div>
+
+    </div>
+
+    <div class="storage">
+
+      <div class="storage-label">
+        Espacio usado
+      </div>
+
+      <div class="bar">
+        <i id="storageBar"></i>
+      </div>
+
+      <div
+        id="storageText"
+        class="storage-text"
+      >
+        ...
+      </div>
+
+      <div
+        id="storageSub"
+        class="storage-sub"
+      ></div>
+
+    </div>
+
+    <div class="side-grid">
+
+      <button
+        id="uploadBtn"
+        class="primary-btn full"
+        type="button"
+      >
+        ⬆ Subir canción
+      </button>
+
+      <div class="spacer"></div>
+
+      <button
+        id="bannerOpenBtn"
+        class="side-btn full"
+        type="button"
+      >
+        🎨 BANNER
+      </button>
+
+      <button
+        class="side-btn full"
+        type="button"
+        onclick="logout()"
+      >
+        LOG OUT
+      </button>
+
+    </div>
+
+  </aside>
+
+  <!-- CENTER -->
+
+  <main class="center" id="center">
+
+    <div class="toolbar">
+
+      <input
+        id="search"
+        class="search"
+        type="search"
+        placeholder="Buscar por título, artista, álbum, género..."
+        autocomplete="off"
+      >
+
+      <select id="sort" title="Ordenar por">
+        <option value="created">Recientes</option>
+        <option value="title">Título</option>
+        <option value="artist">Artista</option>
+        <option value="album">Álbum</option>
+        <option value="size">Tamaño</option>
+        <option value="updated">Modificadas</option>
+      </select>
+
+      <button
+        id="orderBtn"
+        class="order-btn"
+        type="button"
+        title="Cambiar orden"
+      >
+        ▼
+      </button>
+
+      <div id="count" class="count"></div>
+
+    </div>
+
+    <div
+      id="list"
+      class="list scroll"
+    ></div>
+
+  </main>
+
+  <!-- REPRODUCTOR -->
+
+  <footer class="player">
+
+    <div class="now">
+
+      <div id="cover" class="cover">🎵</div>
+
+      <div class="now-text">
+
+        <div
+          id="nowTitle"
+          class="now-title"
+        >
+          Elige una canción
+        </div>
+
+        <div
+          id="nowSub"
+          class="now-sub"
+        ></div>
+
+      </div>
+
+    </div>
+
+    <div class="transport">
+
+      <div class="controls">
+
+        <button
+          id="shuffleBtn"
+          class="ctl"
+          type="button"
+          title="Aleatorio"
+        >
+          🔀
+        </button>
+
+        <button
+          id="prevBtn"
+          class="ctl"
+          type="button"
+          title="Anterior"
+        >
+          ⏮
+        </button>
+
+        <button
+          id="playBtn"
+          class="ctl play"
+          type="button"
+          title="Reproducir / pausar"
+        >
+          ▶
+        </button>
+
+        <button
+          id="nextBtn"
+          class="ctl"
+          type="button"
+          title="Siguiente"
+        >
+          ⏭
+        </button>
+
+        <button
+          id="repeatBtn"
+          class="ctl"
+          type="button"
+          title="Repetir"
+        >
+          🔁
+        </button>
+
+      </div>
+
+      <div class="seek">
+
+        <span id="curTime">0:00</span>
+
+        <input
+          id="seekBar"
+          type="range"
+          min="0"
+          max="1000"
+          value="0"
+        >
+
+        <span id="durTime">0:00</span>
+
+      </div>
+
+    </div>
+
+    <div class="volume">
+
+      <span>🔊</span>
+
+      <input
+        id="volumeBar"
+        type="range"
+        min="0"
+        max="100"
+        value="80"
+      >
+
+    </div>
+
+  </footer>
+
+</div>
+
+<audio id="audio" preload="metadata"></audio>
+
+
+<!-- SUBIR CANCIÓN -->
+
+<div id="uploadModal" class="modal">
+
+  <div class="modal-card">
+
+    <div class="title">
+      Subir canción
+    </div>
+
+    <div id="uploadStatus" class="status-box"></div>
+
+    <div class="field">
+
+      <label for="upFile">
+        Archivo de audio (MP3, WAV, OGG, OPUS, FLAC, M4A, AAC o WEBM)
+      </label>
+
+      <input
+        id="upFile"
+        type="file"
+        accept=".mp3,.wav,.ogg,.opus,.flac,.m4a,.aac,.webm,audio/*"
+      >
+
+    </div>
+
+    <div class="field">
+
+      <label for="upTitle">Título</label>
+
+      <input
+        id="upTitle"
+        type="text"
+        maxlength="200"
+        autocomplete="off"
+      >
+
+    </div>
+
+    <div class="two">
+
+      <div class="field">
+        <label for="upArtist">Artista</label>
+        <input id="upArtist" type="text" maxlength="160" autocomplete="off">
+      </div>
+
+      <div class="field">
+        <label for="upAlbum">Álbum</label>
+        <input id="upAlbum" type="text" maxlength="160" autocomplete="off">
+      </div>
+
+    </div>
+
+    <div class="field">
+      <label for="upGenre">Género</label>
+      <input id="upGenre" type="text" maxlength="80" autocomplete="off">
+    </div>
+
+    <div class="field">
+      <label for="upDesc">Descripción</label>
+      <textarea id="upDesc" maxlength="3000"></textarea>
+    </div>
+
+    <div class="field">
+
+      <label for="upCover">Portada (JPG, PNG o WEBP, máximo 5 MB)</label>
+
+      <div class="cover-row">
+
+        <div id="upCoverPreview" class="cover-preview">🖼️</div>
+
+        <input
+          id="upCover"
+          type="file"
+          accept=".jpg,.jpeg,.png,.webp,image/jpeg,image/png,image/webp"
+        >
+
+      </div>
+
+    </div>
+
+    <div id="upProgress" class="progress">
+
+      <div class="bar">
+        <i id="upBar"></i>
+      </div>
+
+      <div id="upProgressText" class="progress-text"></div>
+
+    </div>
+
+    <div class="modal-actions">
+
+      <button
+        id="upSubmit"
+        class="primary-btn"
+        type="button"
+      >
+        Subir
+      </button>
+
+      <button
+        id="upCancel"
+        class="secondary-btn"
+        type="button"
+      >
+        Cancelar
+      </button>
+
+    </div>
+
+  </div>
+
+</div>
+
+
+<!-- EDITAR CANCIÓN -->
+
+<div id="editModal" class="modal">
+
+  <div class="modal-card">
+
+    <div class="title">
+      Editar canción
+    </div>
+
+    <div id="editStatus" class="status-box"></div>
+
+    <div class="field">
+      <label for="edTitle">Título</label>
+      <input id="edTitle" type="text" maxlength="200" autocomplete="off">
+    </div>
+
+    <div class="two">
+
+      <div class="field">
+        <label for="edArtist">Artista</label>
+        <input id="edArtist" type="text" maxlength="160" autocomplete="off">
+      </div>
+
+      <div class="field">
+        <label for="edAlbum">Álbum</label>
+        <input id="edAlbum" type="text" maxlength="160" autocomplete="off">
+      </div>
+
+    </div>
+
+    <div class="field">
+      <label for="edGenre">Género</label>
+      <input id="edGenre" type="text" maxlength="80" autocomplete="off">
+    </div>
+
+    <div class="field">
+      <label for="edDesc">Descripción</label>
+      <textarea id="edDesc" maxlength="3000"></textarea>
+    </div>
+
+    <div class="modal-actions">
+
+      <button
+        id="edSave"
+        class="primary-btn"
+        type="button"
+      >
+        Guardar
+      </button>
+
+      <button
+        id="edCancel"
+        class="secondary-btn"
+        type="button"
+      >
+        Cancelar
+      </button>
+
+    </div>
+
+  </div>
+
+</div>
+
+
+<!-- DIÁLOGO (confirmaciones) -->
+
+<div id="dialog" class="modal">
+
+  <div class="modal-card small">
+
+    <div id="dlgTitle" class="title"></div>
+
+    <p id="dlgText" class="dlg-text"></p>
+
+    <div class="modal-actions">
+
+      <button
+        id="dlgOk"
+        class="primary-btn"
+        type="button"
+      >
+        Aceptar
+      </button>
+
+      <button
+        id="dlgCancel"
+        class="secondary-btn"
+        type="button"
+      >
+        Cancelar
+      </button>
+
+    </div>
+
+  </div>
+
+</div>
+
+
+<!-- TARJETA DE BANNERS -->
+
+<div id="bannerModal" class="modal">
+
+  <div class="modal-card">
+
+    <div class="title">
+      Elige tu banner
+    </div>
+
+    <div id="bannerGrid" class="banner-grid"></div>
+
+    <input
+      id="bannerFileInput"
+      type="file"
+      accept="image/*"
+      hidden
+    >
+
+    <div class="modal-actions">
+
+      <button
+        id="bannerUploadBtn"
+        class="primary-btn"
+        type="button"
+      >
+        📷 Subir mi foto
+      </button>
+
+      <button
+        id="bannerCloseBtn"
+        class="secondary-btn"
+        type="button"
+      >
+        Cerrar
+      </button>
+
+    </div>
+
+  </div>
+
+</div>
+
+
+<div id="toast" class="toast"></div>
+
+
+<script>
+/* ============================================================
+   ESTADO
+============================================================ */
+
+let TOKEN = localStorage.getItem(TOKEN_KEY) || "";
+
+let ME = null;
+
+let tracks = [];          // canciones cargadas (la lista actual)
+let total = 0;            // total que existe con el filtro actual
+let query = "";
+let sortBy = "created";
+let sortOrder = "desc";
+let loadingList = false;
+
+let currentTrack = null;  // canción en el reproductor
+let playToken = 0;        // evita mezclar respuestas de clics rápidos
+let retriedTicket = false;
+let shuffle = false;
+let repeat = "off";       // off | all | one
+let seeking = false;
+
+let maxTrackBytes = DEFAULT_MAX_TRACK_BYTES;
+let uploadXhr = null;
+let editingTrack = null;
+
+let searchTimer = null;
+let toastTimer = null;
+let redirecting = false;
+
+const $ = id => document.getElementById(id);
+
+const audio = $("audio");
+
+
+/* ============================================================
+   UTILIDADES
+============================================================ */
+
+function pfpUrl(value){
+
+  if(!value){
+    return "https://via.placeholder.com/52";
+  }
+
+  if(value.startsWith("http://") || value.startsWith("https://")){
+    return value;
+  }
+
+  return KN_AUTH_API + (value.startsWith("/") ? value : "/" + value);
+}
+
+
+function showToast(message){
+
+  const box = $("toast");
+
+  box.textContent = message || "Ocurrió un error.";
+  box.classList.add("show");
+
+  clearTimeout(toastTimer);
+
+  toastTimer = setTimeout(() => {
+    box.classList.remove("show");
+  }, 3200);
+}
+
+
+function formatBytes(bytes){
+
+  if(!bytes){
+    return "0 B";
+  }
+
+  const units = ["B", "KB", "MB", "GB", "TB"];
+
+  let i = 0;
+  let value = bytes;
+
+  while(value >= 1024 && i < units.length - 1){
+    value /= 1024;
+    i++;
+  }
+
+  return (value >= 100 || i === 0 ? Math.round(value) : value.toFixed(1)) + " " + units[i];
+}
+
+
+function formatTime(seconds){
+
+  if(!isFinite(seconds) || seconds < 0){
+    return "0:00";
+  }
+
+  const m = Math.floor(seconds / 60);
+  const s = Math.floor(seconds % 60);
+
+  return m + ":" + String(s).padStart(2, "0");
+}
+
+
+function formatDate(unix){
+
+  if(!unix){
+    return "";
+  }
+
+  return new Date(unix * 1000).toLocaleDateString("es");
+}
+
+
+function extOf(name){
+
+  const i = name.lastIndexOf(".");
+
+  return i >= 0 ? name.slice(i).toLowerCase() : "";
+}
+
+
+/* ============================================================
+   SESIÓN
+============================================================ */
+
+function goAuth(){
+
+  if(redirecting){
+    return;
+  }
+
+  redirecting = true;
+
+  window.location.replace(
+    AUTH_URL +
+    "?redirect=" +
+    encodeURIComponent(window.location.href)
+  );
+}
+
+
+function sessionExpired(){
+
+  localStorage.removeItem(TOKEN_KEY);
+
+  TOKEN = "";
+
+  goAuth();
+}
+
+
+/*
+  Llamada a la API de Smart-Sound.
+  Envía el token como Smart-Token y, si la sesión caduca (401),
+  te manda al login.
+*/
+
+async function api(route, options = {}){
+
+  let response;
+
+  try{
+
+    response = await fetch(API + route, {
+      ...options,
+      headers:{
+        "Authorization": "Smart-Token " + TOKEN,
+        ...(options.headers || {})
+      }
+    });
+
+  }catch(error){
+
+    console.error(error);
+
+    throw new Error("No se pudo conectar con Smart-Sound.");
+  }
+
+  const data = await response.json().catch(() => ({}));
+
+  if(response.status === 401){
+
+    sessionExpired();
+
+    const redirected = new Error("redirect");
+    redirected.redirected = true;
+    throw redirected;
+  }
+
+  if(!response.ok){
+
+    const error = new Error(
+      (typeof data.detail === "string" && data.detail) ||
+      "Ocurrió un error."
+    );
+
+    error.status = response.status;
+
+    throw error;
+  }
+
+  return data;
+}
+
+
+async function loadMe(){
+
+  if(!TOKEN){
+
+    goAuth();
+
+    return false;
+  }
+
+  try{
+
+    const data = await api("/api/me");
+
+    ME = data.user || data;
+
+    if(!ME || !ME.username){
+
+      goAuth();
+
+      return false;
+    }
+
+    $("me").textContent = "@" + ME.username;
+
+    const img = $("mypfp");
+
+    img.src = pfpUrl(ME.pfp || ME.profile_picture);
+
+    img.onerror = () => {
+      img.onerror = null;
+      img.src = "https://via.placeholder.com/52";
+    };
+
+    return true;
+
+  }catch(error){
+
+    if(!error.redirected){
+      showToast(error.message);
+    }
+
+    return false;
+  }
+}
+
+
+async function loadLimits(){
+
+  // /api es público: informa de los límites del servidor
+  try{
+
+    const response = await fetch(API + "/api");
+    const data = await response.json();
+
+    if(data && data.max_track_bytes){
+      maxTrackBytes = data.max_track_bytes;
+    }
+
+  }catch(error){
+
+    console.error(error);
+  }
+}
+
+
+/* ============================================================
+   ESPACIO
+============================================================ */
+
+async function loadStorage(){
+
+  try{
+
+    const data = await api("/api/storage");
+
+    const percent = Math.min(100, (data.used_bytes / data.quota_bytes) * 100);
+
+    const bar = $("storageBar");
+
+    bar.style.width = percent + "%";
+    bar.classList.toggle("full", percent >= 90);
+
+    $("storageText").textContent =
+      formatBytes(data.used_bytes) + " de " + formatBytes(data.quota_bytes);
+
+    $("storageSub").textContent =
+      data.track_count + (data.track_count === 1 ? " canción" : " canciones");
+
+  }catch(error){
+
+    if(!error.redirected){
+      $("storageText").textContent = "No disponible";
+    }
+  }
+}
+
+
+/* ============================================================
+   BIBLIOTECA
+============================================================ */
+
+async function loadTracks(reset = true){
+
+  if(loadingList){
+    return;
+  }
+
+  loadingList = true;
+
+  const offset = reset ? 0 : tracks.length;
+
+  try{
+
+    const params = new URLSearchParams({
+      search: query,
+      sort: sortBy,
+      order: sortOrder,
+      limit: PAGE_SIZE,
+      offset: offset
+    });
+
+    const data = await api("/api/tracks?" + params.toString());
+
+    tracks = reset ? data.tracks : tracks.concat(data.tracks);
+    total = data.total;
+
+    renderList();
+
+  }catch(error){
+
+    if(!error.redirected){
+      showToast(error.message);
+    }
+
+  }finally{
+
+    loadingList = false;
+  }
+}
+
+
+function renderList(){
+
+  const box = $("list");
+
+  box.innerHTML = "";
+
+  $("count").textContent =
+    total + (total === 1 ? " canción" : " canciones");
+
+  if(!tracks.length){
+
+    const empty = document.createElement("div");
+
+    empty.className = "empty";
+
+    empty.textContent = query
+      ? "No se encontró ninguna canción con esa búsqueda."
+      : "Tu biblioteca está vacía. Usa «Subir canción» para empezar.";
+
+    box.appendChild(empty);
+
+    return;
+  }
+
+  tracks.forEach(track => {
+
+    const row = document.createElement("div");
+
+    row.className = "row" +
+      (currentTrack && currentTrack.id === track.id ? " playing" : "");
+
+    row.dataset.id = track.id;
+
+    row.onclick = () => playTrack(track);
+
+    const icon = document.createElement("div");
+
+    icon.className = "row-icon";
+
+    if(currentTrack && currentTrack.id === track.id){
+
+      const eq = document.createElement("div");
+
+      eq.className = "eq" + (audio.paused ? " paused" : "");
+      eq.innerHTML = "<i></i><i></i><i></i>";
+
+      icon.appendChild(eq);
+
+    }else{
+
+      icon.textContent = "🎵";
+    }
+
+    const main = document.createElement("div");
+
+    main.className = "row-main";
+
+    const title = document.createElement("div");
+
+    title.className = "row-title";
+    title.textContent = track.title;
+    title.title = track.title;
+
+    const sub = document.createElement("div");
+
+    sub.className = "row-sub";
+    sub.textContent = track.artist || "Artista desconocido";
+
+    main.append(title, sub);
+
+    const extra = document.createElement("div");
+
+    extra.className = "row-extra";
+    extra.textContent = [track.album, track.genre].filter(Boolean).join(" · ");
+
+    const size = document.createElement("div");
+
+    size.className = "row-size";
+    size.textContent = formatBytes(track.size_bytes);
+
+    const actions = document.createElement("div");
+
+    actions.className = "row-actions";
+
+    const download = document.createElement("button");
+
+    download.className = "icon-btn";
+    download.type = "button";
+    download.title = "Descargar";
+    download.textContent = "⬇";
+    download.onclick = event => {
+      event.stopPropagation();
+      downloadTrack(track);
+    };
+
+    const edit = document.createElement("button");
+
+    edit.className = "icon-btn sec";
+    edit.type = "button";
+    edit.title = "Editar";
+    edit.textContent = "✏";
+    edit.onclick = event => {
+      event.stopPropagation();
+      openEdit(track);
+    };
+
+    const remove = document.createElement("button");
+
+    remove.className = "icon-btn del";
+    remove.type = "button";
+    remove.title = "Eliminar";
+    remove.textContent = "🗑";
+    remove.onclick = event => {
+      event.stopPropagation();
+      deleteTrack(track);
+    };
+
+    actions.append(download, edit, remove);
+
+    row.append(icon, main, extra, size, actions);
+
+    box.appendChild(row);
+  });
+
+  if(tracks.length < total){
+
+    const more = document.createElement("button");
+
+    more.className = "more-btn";
+    more.type = "button";
+    more.textContent = "Cargar más (" + (total - tracks.length) + ")";
+    more.onclick = () => loadTracks(false);
+
+    box.appendChild(more);
+  }
+}
+
+
+/* ============================================================
+   REPRODUCTOR
+============================================================ */
+
+async function playTrack(track, startAt = 0){
+
+  const myToken = ++playToken;
+
+  try{
+
+    const data = await api(
+      "/api/tracks/" + encodeURIComponent(track.id) + "/playback-ticket",
+      { method:"POST" }
+    );
+
+    // Si hiciste clic en otra canción mientras tanto, se ignora esta
+    if(myToken !== playToken){
+      return;
+    }
+
+    currentTrack = track;
+
+    audio.src = API + data.stream_url;
+
+    if(startAt > 0){
+
+      audio.addEventListener("loadedmetadata", () => {
+        audio.currentTime = startAt;
+      }, { once:true });
+    }
+
+    await audio.play().catch(error => {
+      console.error(error);
+      showToast("El navegador bloqueó la reproducción. Pulsa ▶.");
+    });
+
+    showNow(track, data.cover_url ? API + data.cover_url : "");
+
+    renderList();
+
+  }catch(error){
+
+    if(!error.redirected){
+      showToast(error.message);
+    }
+  }
+}
+
+
+function showNow(track, coverUrl){
+
+  $("nowTitle").textContent = track.title;
+
+  $("nowSub").textContent =
+    [track.artist, track.album].filter(Boolean).join(" · ") ||
+    "Artista desconocido";
+
+  const cover = $("cover");
+
+  cover.innerHTML = "";
+
+  if(coverUrl){
+
+    const img = document.createElement("img");
+
+    img.alt = "Portada";
+    img.src = coverUrl;
+
+    img.onerror = () => {
+      cover.innerHTML = "";
+      cover.textContent = "🎵";
+    };
+
+    cover.appendChild(img);
+
+  }else{
+
+    cover.textContent = "🎵";
+  }
+
+  document.title = track.title + " · Smart-Sound";
+
+  // Controles del sistema (teclas multimedia, pantalla de bloqueo)
+  if("mediaSession" in navigator){
+
+    try{
+
+      navigator.mediaSession.metadata = new MediaMetadata({
+        title: track.title,
+        artist: track.artist || "",
+        album: track.album || "",
+        artwork: coverUrl ? [{ src: coverUrl }] : []
+      });
+
+      navigator.mediaSession.setActionHandler("play", () => audio.play());
+      navigator.mediaSession.setActionHandler("pause", () => audio.pause());
+      navigator.mediaSession.setActionHandler("previoustrack", () => playPrevious());
+      navigator.mediaSession.setActionHandler("nexttrack", () => playNext(true));
+
+    }catch(error){
+
+      console.error(error);
+    }
+  }
+}
+
+
+function clearNow(){
+
+  currentTrack = null;
+  playToken++;
+
+  audio.pause();
+  audio.removeAttribute("src");
+  audio.load();
+
+  $("nowTitle").textContent = "Elige una canción";
+  $("nowSub").textContent = "";
+  $("cover").innerHTML = "";
+  $("cover").textContent = "🎵";
+
+  $("seekBar").value = 0;
+  $("curTime").textContent = "0:00";
+  $("durTime").textContent = "0:00";
+
+  $("playBtn").textContent = "▶";
+
+  document.title = "Smart-Sound";
+}
+
+
+function togglePlay(){
+
+  if(!currentTrack){
+
+    if(tracks.length){
+      playTrack(tracks[0]);
+    }
+
+    return;
+  }
+
+  if(audio.paused){
+    audio.play().catch(() => {});
+  }else{
+    audio.pause();
+  }
+}
+
+
+function currentIndex(){
+
+  if(!currentTrack){
+    return -1;
+  }
+
+  return tracks.findIndex(track => track.id === currentTrack.id);
+}
+
+
+function playNext(manual = false){
+
+  if(!tracks.length){
+    return;
+  }
+
+  const index = currentIndex();
+
+  if(shuffle && tracks.length > 1){
+
+    let next;
+
+    do{
+      next = Math.floor(Math.random() * tracks.length);
+    }while(next === index);
+
+    playTrack(tracks[next]);
+
+    return;
+  }
+
+  if(index < tracks.length - 1){
+
+    playTrack(tracks[index + 1]);
+
+    return;
+  }
+
+  // Última canción de la lista
+  if(repeat === "all" || manual){
+
+    playTrack(tracks[0]);
+
+    return;
+  }
+
+  audio.pause();
+  audio.currentTime = 0;
+}
+
+
+function playPrevious(){
+
+  if(!tracks.length){
+    return;
+  }
+
+  // Si ya avanzó, vuelve al principio de la canción
+  if(audio.currentTime > 3){
+
+    audio.currentTime = 0;
+
+    return;
+  }
+
+  const index = currentIndex();
+
+  playTrack(tracks[index > 0 ? index - 1 : tracks.length - 1]);
+}
+
+
+function refreshPlayButtons(){
+
+  $("playBtn").textContent = audio.paused ? "▶" : "⏸";
+
+  $("shuffleBtn").classList.toggle("on", shuffle);
+
+  const repeatBtn = $("repeatBtn");
+
+  repeatBtn.classList.toggle("on", repeat !== "off");
+  repeatBtn.textContent = repeat === "one" ? "🔂" : "🔁";
+  repeatBtn.title =
+    repeat === "off" ? "Repetir: no" :
+    repeat === "all" ? "Repetir: toda la lista" :
+    "Repetir: esta canción";
+
+  document.querySelectorAll(".row.playing .eq").forEach(eq => {
+    eq.classList.toggle("paused", audio.paused);
+  });
+}
+
+
+audio.addEventListener("play", refreshPlayButtons);
+audio.addEventListener("pause", refreshPlayButtons);
+
+audio.addEventListener("loadedmetadata", () => {
+  $("durTime").textContent = formatTime(audio.duration);
+});
+
+audio.addEventListener("timeupdate", () => {
+
+  $("curTime").textContent = formatTime(audio.currentTime);
+
+  if(!seeking && audio.duration){
+    $("seekBar").value = (audio.currentTime / audio.duration) * 1000;
+  }
+});
+
+audio.addEventListener("ended", () => {
+
+  if(repeat === "one"){
+
+    audio.currentTime = 0;
+    audio.play().catch(() => {});
+
+    return;
+  }
+
+  playNext(false);
+});
+
+// El enlace de reproducción dura 30 minutos: si caduca, se pide otro y sigue donde iba
+audio.addEventListener("error", () => {
+
+  if(!currentTrack || retriedTicket){
+    return;
+  }
+
+  retriedTicket = true;
+
+  const resumeAt = audio.currentTime || 0;
+
+  playTrack(currentTrack, resumeAt).finally(() => {
+    retriedTicket = false;
+  });
+});
+
+
+$("playBtn").onclick = togglePlay;
+$("nextBtn").onclick = () => playNext(true);
+$("prevBtn").onclick = playPrevious;
+
+$("shuffleBtn").onclick = () => {
+
+  shuffle = !shuffle;
+
+  refreshPlayButtons();
+};
+
+$("repeatBtn").onclick = () => {
+
+  repeat = repeat === "off" ? "all" : repeat === "all" ? "one" : "off";
+
+  refreshPlayButtons();
+};
+
+$("seekBar").addEventListener("input", () => {
+
+  seeking = true;
+
+  if(audio.duration){
+    $("curTime").textContent =
+      formatTime((Number($("seekBar").value) / 1000) * audio.duration);
+  }
+});
+
+$("seekBar").addEventListener("change", () => {
+
+  if(audio.duration){
+    audio.currentTime = (Number($("seekBar").value) / 1000) * audio.duration;
+  }
+
+  seeking = false;
+});
+
+$("volumeBar").addEventListener("input", () => {
+
+  audio.volume = Number($("volumeBar").value) / 100;
+
+  try{
+    localStorage.setItem(VOLUME_KEY, $("volumeBar").value);
+  }catch(error){}
+});
+
+
+/* ============================================================
+   DIÁLOGO DE CONFIRMACIÓN
+============================================================ */
+
+function askDialog({ title, text = "", ok = "Aceptar", danger = false }){
+
+  return new Promise(resolve => {
+
+    const modal = $("dialog");
+    const okBtn = $("dlgOk");
+    const cancelBtn = $("dlgCancel");
+
+    $("dlgTitle").textContent = title;
+    $("dlgText").textContent = text;
+
+    okBtn.textContent = ok;
+    okBtn.className = danger ? "danger-btn" : "primary-btn";
+
+    const done = result => {
+
+      modal.classList.remove("show");
+
+      okBtn.onclick = null;
+      cancelBtn.onclick = null;
+
+      resolve(result);
+    };
+
+    okBtn.onclick = () => done(true);
+    cancelBtn.onclick = () => done(false);
+
+    modal.classList.add("show");
+
+    okBtn.focus();
+  });
+}
+
+
+/* ============================================================
+   ACCIONES
+============================================================ */
+
+async function deleteTrack(track){
+
+  const confirmed = await askDialog({
+    title: "¿Eliminar canción?",
+    text: "Se eliminará «" + track.title + "» de tu biblioteca. Esta acción no se puede deshacer.",
+    ok: "Eliminar",
+    danger: true
+  });
+
+  if(!confirmed){
+    return;
+  }
+
+  try{
+
+    await api("/api/tracks/" + encodeURIComponent(track.id), {
+      method:"DELETE"
+    });
+
+    if(currentTrack && currentTrack.id === track.id){
+      clearNow();
+    }
+
+    showToast("Canción eliminada.");
+
+    await loadTracks(true);
+    await loadStorage();
+
+  }catch(error){
+
+    if(!error.redirected){
+      showToast(error.message);
+    }
+  }
+}
+
+
+async function downloadTrack(track){
+
+  showToast("Preparando descarga...");
+
+  try{
+
+    // La descarga exige sesión, por eso se pide con el token y se guarda como archivo
+    const response = await fetch(
+      API + "/api/tracks/" + encodeURIComponent(track.id) + "/download",
+      { headers:{ "Authorization": "Smart-Token " + TOKEN } }
+    );
+
+    if(response.status === 401){
+
+      sessionExpired();
+
+      return;
+    }
+
+    if(!response.ok){
+
+      const data = await response.json().catch(() => ({}));
+
+      throw new Error(data.detail || "No se pudo descargar.");
+    }
+
+    const blob = await response.blob();
+    const url = URL.createObjectURL(blob);
+
+    const link = document.createElement("a");
+
+    link.href = url;
+    link.download = track.original_name || (track.title + (track.extension || ""));
+
+    document.body.appendChild(link);
+    link.click();
+    link.remove();
+
+    setTimeout(() => URL.revokeObjectURL(url), 30000);
+
+  }catch(error){
+
+    showToast(error.message || "No se pudo descargar.");
+  }
+}
+
+
+/* ============================================================
+   EDITAR
+============================================================ */
+
+function setStatus(boxId, message, type){
+
+  const box = $(boxId);
+
+  box.textContent = message || "";
+  box.className = "status-box" + (message ? " show " + (type || "err") : "");
+}
+
+
+function openEdit(track){
+
+  editingTrack = track;
+
+  $("edTitle").value = track.title || "";
+  $("edArtist").value = track.artist || "";
+  $("edAlbum").value = track.album || "";
+  $("edGenre").value = track.genre || "";
+  $("edDesc").value = track.description || "";
+
+  setStatus("editStatus", "");
+
+  $("editModal").classList.add("show");
+
+  $("edTitle").focus();
+}
+
+
+function closeEdit(){
+
+  $("editModal").classList.remove("show");
+
+  editingTrack = null;
+}
+
+
+async function saveEdit(){
+
+  if(!editingTrack){
+    return;
+  }
+
+  const title = $("edTitle").value.trim();
+
+  if(!title){
+
+    setStatus("editStatus", "El título no puede estar vacío.", "err");
+
+    return;
+  }
+
+  const button = $("edSave");
+
+  button.disabled = true;
+
+  setStatus("editStatus", "Revisando y guardando...", "info");
+
+  try{
+
+    const data = await api(
+      "/api/tracks/" + encodeURIComponent(editingTrack.id),
+      {
+        method:"PATCH",
+        headers:{ "Content-Type":"application/json" },
+        body: JSON.stringify({
+          title,
+          artist: $("edArtist").value,
+          album: $("edAlbum").value,
+          genre: $("edGenre").value,
+          description: $("edDesc").value
+        })
+      }
+    );
+
+    const updated = data.track;
+
+    // Actualiza la canción en la lista sin recargar todo
+    const index = tracks.findIndex(item => item.id === updated.id);
+
+    if(index >= 0){
+      tracks[index] = updated;
+    }
+
+    if(currentTrack && currentTrack.id === updated.id){
+
+      currentTrack = updated;
+
+      $("nowTitle").textContent = updated.title;
+
+      $("nowSub").textContent =
+        [updated.artist, updated.album].filter(Boolean).join(" · ") ||
+        "Artista desconocido";
+    }
+
+    renderList();
+
+    closeEdit();
+
+    showToast("Canción actualizada.");
+
+  }catch(error){
+
+    if(!error.redirected){
+      setStatus("editStatus", error.message, "err");
+    }
+
+  }finally{
+
+    button.disabled = false;
+  }
+}
+
+
+/* ============================================================
+   SUBIR
+============================================================ */
+
+function resetUploadForm(){
+
+  ["upFile", "upCover"].forEach(id => { $(id).value = ""; });
+  ["upTitle", "upArtist", "upAlbum", "upGenre", "upDesc"].forEach(id => { $(id).value = ""; });
+
+  $("upCoverPreview").innerHTML = "";
+  $("upCoverPreview").textContent = "🖼️";
+
+  $("upBar").style.width = "0";
+
+  $("upProgress").classList.remove("show");
+  $("upProgressText").textContent = "";
+
+  setStatus("uploadStatus", "");
+
+  $("upSubmit").disabled = false;
+}
+
+
+function openUpload(){
+
+  resetUploadForm();
+
+  $("uploadModal").classList.add("show");
+}
+
+
+function closeUpload(){
+
+  // Si hay una subida en curso, se cancela
+  if(uploadXhr){
+
+    uploadXhr.abort();
+
+    uploadXhr = null;
+  }
+
+  $("uploadModal").classList.remove("show");
+}
+
+
+$("upFile").addEventListener("change", () => {
+
+  const file = $("upFile").files[0];
+
+  if(file && !$("upTitle").value.trim()){
+
+    // El título se rellena con el nombre del archivo (sin la extensión)
+    $("upTitle").value = file.name.replace(/\.[^.]+$/, "");
+  }
+});
+
+$("upCover").addEventListener("change", () => {
+
+  const file = $("upCover").files[0];
+  const preview = $("upCoverPreview");
+
+  preview.innerHTML = "";
+
+  if(!file){
+
+    preview.textContent = "🖼️";
+
+    return;
+  }
+
+  const img = document.createElement("img");
+
+  img.alt = "Portada";
+  img.src = URL.createObjectURL(file);
+
+  img.onload = () => URL.revokeObjectURL(img.src);
+
+  preview.appendChild(img);
+});
+
+
+function submitUpload(){
+
+  const file = $("upFile").files[0];
+  const cover = $("upCover").files[0];
+
+  if(!file){
+
+    setStatus("uploadStatus", "Elige un archivo de audio.", "err");
+
+    return;
+  }
+
+  if(!AUDIO_EXTENSIONS.includes(extOf(file.name))){
+
+    setStatus(
+      "uploadStatus",
+      "Formato no admitido. Usa " +
+      AUDIO_EXTENSIONS.map(ext => ext.slice(1).toUpperCase()).join(", ") + ".",
+      "err"
+    );
+
+    return;
+  }
+
+  if(file.size > maxTrackBytes){
+
+    setStatus(
+      "uploadStatus",
+      "El audio supera el límite de " + formatBytes(maxTrackBytes) + ".",
+      "err"
+    );
+
+    return;
+  }
+
+  if(cover){
+
+    if(!COVER_EXTENSIONS.includes(extOf(cover.name))){
+
+      setStatus("uploadStatus", "La portada debe ser JPG, PNG o WEBP.", "err");
+
+      return;
+    }
+
+    if(cover.size > MAX_COVER_BYTES){
+
+      setStatus(
+        "uploadStatus",
+        "La portada supera el límite de " + formatBytes(MAX_COVER_BYTES) + ".",
+        "err"
+      );
+
+      return;
+    }
+  }
+
+  const form = new FormData();
+
+  form.append("file", file);
+  form.append("title", $("upTitle").value.trim());
+  form.append("artist", $("upArtist").value.trim());
+  form.append("album", $("upAlbum").value.trim());
+  form.append("genre", $("upGenre").value.trim());
+  form.append("description", $("upDesc").value.trim());
+
+  if(cover){
+    form.append("cover", cover);
+  }
+
+  setStatus("uploadStatus", "");
+
+  $("upSubmit").disabled = true;
+
+  $("upProgress").classList.add("show");
+  $("upBar").style.width = "0";
+  $("upProgressText").textContent = "Subiendo... 0%";
+
+  const xhr = new XMLHttpRequest();
+
+  uploadXhr = xhr;
+
+  xhr.open("POST", API + "/api/tracks/upload");
+
+  xhr.setRequestHeader("Authorization", "Smart-Token " + TOKEN);
+
+  xhr.upload.onprogress = event => {
+
+    if(!event.lengthComputable){
+      return;
+    }
+
+    const percent = Math.floor((event.loaded / event.total) * 100);
+
+    $("upBar").style.width = percent + "%";
+
+    $("upProgressText").textContent =
+      "Subiendo... " + percent + "% (" +
+      formatBytes(event.loaded) + " de " + formatBytes(event.total) + ")";
+  };
+
+  // Al terminar de subir, el servidor revisa el texto y la portada antes de guardar
+  xhr.upload.onload = () => {
+
+    $("upBar").style.width = "100%";
+
+    $("upProgressText").textContent = "Revisando el contenido y guardando...";
+  };
+
+  xhr.onload = async () => {
+
+    uploadXhr = null;
+
+    let data = {};
+
+    try{
+      data = JSON.parse(xhr.responseText || "{}");
+    }catch(error){}
+
+    if(xhr.status === 401){
+
+      sessionExpired();
+
+      return;
+    }
+
+    if(xhr.status >= 200 && xhr.status < 300){
+
+      $("uploadModal").classList.remove("show");
+
+      showToast("Canción subida.");
+
+      await loadTracks(true);
+      await loadStorage();
+
+      return;
+    }
+
+    $("upSubmit").disabled = false;
+
+    $("upProgress").classList.remove("show");
+
+    setStatus(
+      "uploadStatus",
+      (typeof data.detail === "string" && data.detail) ||
+      "No se pudo subir la canción.",
+      "err"
+    );
+  };
+
+  xhr.onerror = () => {
+
+    uploadXhr = null;
+
+    $("upSubmit").disabled = false;
+
+    $("upProgress").classList.remove("show");
+
+    setStatus("uploadStatus", "Se perdió la conexión al subir.", "err");
+  };
+
+  xhr.onabort = () => {
+
+    uploadXhr = null;
+  };
+
+  xhr.send(form);
+}
+
+
+/* ============================================================
+   LOGOUT
+============================================================ */
+
+async function logout(){
+
+  try{
+
+    await fetch(API + "/api/logout", {
+      method:"POST",
+      headers:{ "Authorization": "Smart-Token " + TOKEN }
+    });
+
+  }catch(error){
+
+    console.error(error);
+  }
+
+  localStorage.removeItem(TOKEN_KEY);
+
+  TOKEN = "";
+
+  goAuth();
+}
+
+
+/* ============================================================
+   BANNERS
+============================================================ */
+
+/*
+  Se guarda por usuario en este navegador:
+    smartsound_banner_<usuario>         -> "banner1.png" | "custom" | ""
+    smartsound_banner_<usuario>_custom  -> foto personalizada (data URL)
+*/
+
+function bannerKey(){
+
+  return BANNER_STORAGE_PREFIX + (ME?.username || "");
+}
+
+
+function storageGet(key){
+
+  try{
+    return localStorage.getItem(key) || "";
+  }catch(error){
+    return "";
+  }
+}
+
+
+function storageSet(key, value){
+
+  try{
+
+    if(value){
+      localStorage.setItem(key, value);
+    }else{
+      localStorage.removeItem(key);
+    }
+
+    return true;
+
+  }catch(error){
+
+    return false;
+  }
+}
+
+
+function applyBanner(src){
+
+  const center = $("center");
+
+  if(!src){
+
+    center.style.backgroundImage = "";
+
+    return;
+  }
+
+  center.style.backgroundImage =
+    `linear-gradient(rgba(20,24,30,${BANNER_DIM}),rgba(20,24,30,${BANNER_DIM})), url("${src}")`;
+}
+
+
+function currentBannerSrc(){
+
+  const choice = storageGet(bannerKey());
+
+  if(choice === "custom"){
+    return storageGet(bannerKey() + "_custom");
+  }
+
+  return choice;
+}
+
+
+function renderBannerGrid(){
+
+  const grid = $("bannerGrid");
+
+  const choice = storageGet(bannerKey());
+  const custom = storageGet(bannerKey() + "_custom");
+
+  grid.innerHTML = "";
+
+  const addOption = (label, preview, value) => {
+
+    const button = document.createElement("button");
+
+    button.type = "button";
+    button.className = "banner-opt" + (choice === value ? " active" : "");
+
+    if(preview){
+
+      const img = document.createElement("img");
+
+      img.src = preview;
+      img.alt = label;
+
+      img.onerror = () => {
+
+        img.onerror = null;
+
+        const missing = document.createElement("div");
+
+        missing.className = "banner-none";
+        missing.textContent = "No encontrado";
+
+        img.replaceWith(missing);
+      };
+
+      button.appendChild(img);
+
+    }else{
+
+      const none = document.createElement("div");
+
+      none.className = "banner-none";
+      none.textContent = "Fondo gris";
+
+      button.appendChild(none);
+    }
+
+    const text = document.createElement("div");
+
+    text.textContent = label;
+
+    button.appendChild(text);
+
+    button.onclick = () => selectBanner(value);
+
+    grid.appendChild(button);
+  };
+
+  BANNERS.forEach(banner => addOption(banner.name, banner.file, banner.file));
+
+  if(custom){
+    addOption("Mi foto", custom, "custom");
+  }
+
+  addOption("Sin banner", "", "");
+}
+
+
+function selectBanner(value){
+
+  storageSet(bannerKey(), value);
+
+  applyBanner(currentBannerSrc());
+
+  renderBannerGrid();
+}
+
+
+function openBannerModal(){
+
+  renderBannerGrid();
+
+  $("bannerModal").classList.add("show");
+}
+
+
+function closeBannerModal(){
+
+  $("bannerModal").classList.remove("show");
+}
+
+
+function fileToBannerData(file){
+
+  return new Promise((resolve, reject) => {
+
+    const reader = new FileReader();
+
+    reader.onerror = () => reject(new Error("No se pudo leer la imagen."));
+
+    reader.onload = () => {
+
+      const img = new Image();
+
+      img.onerror = () => reject(new Error("El archivo no es una imagen válida."));
+
+      img.onload = () => {
+
+        // Reduce la foto para que quepa en el almacenamiento del navegador
+        const scale = Math.min(
+          1,
+          CUSTOM_BANNER_MAX_SIDE / Math.max(img.width, img.height)
+        );
+
+        const canvas = document.createElement("canvas");
+
+        canvas.width = Math.max(1, Math.round(img.width * scale));
+        canvas.height = Math.max(1, Math.round(img.height * scale));
+
+        canvas.getContext("2d").drawImage(img, 0, 0, canvas.width, canvas.height);
+
+        resolve(canvas.toDataURL("image/jpeg", CUSTOM_BANNER_QUALITY));
+      };
+
+      img.src = reader.result;
+    };
+
+    reader.readAsDataURL(file);
+  });
+}
+
+
+async function uploadBanner(file){
+
+  if(!file){
+    return;
+  }
+
+  if(!file.type.startsWith("image/")){
+
+    showToast("Elige una imagen (JPG, PNG, WEBP...).");
+
+    return;
+  }
+
+  try{
+
+    const data = await fileToBannerData(file);
+
+    if(!storageSet(bannerKey() + "_custom", data)){
+
+      showToast("La foto es demasiado grande para guardarla.");
+
+      return;
+    }
+
+    selectBanner("custom");
+
+    showToast("Banner actualizado.");
+
+  }catch(error){
+
+    showToast(error.message);
+  }
+}
+
+
+/* ============================================================
+   EVENTOS
+============================================================ */
+
+$("uploadBtn").onclick = openUpload;
+$("upSubmit").onclick = submitUpload;
+$("upCancel").onclick = closeUpload;
+
+$("edSave").onclick = saveEdit;
+$("edCancel").onclick = closeEdit;
+
+$("bannerOpenBtn").onclick = openBannerModal;
+$("bannerCloseBtn").onclick = closeBannerModal;
+
+$("bannerUploadBtn").onclick = () => $("bannerFileInput").click();
+
+$("bannerFileInput").addEventListener("change", event => {
+
+  const file = event.target.files?.[0];
+
+  if(file){
+    uploadBanner(file);
+  }
+
+  event.target.value = "";
+});
+
+// Clic fuera de la tarjeta cierra banners y edición (la subida y los diálogos no)
+$("bannerModal").addEventListener("click", event => {
+
+  if(event.target.id === "bannerModal"){
+    closeBannerModal();
+  }
+});
+
+$("editModal").addEventListener("click", event => {
+
+  if(event.target.id === "editModal"){
+    closeEdit();
+  }
+});
+
+$("search").addEventListener("input", () => {
+
+  clearTimeout(searchTimer);
+
+  searchTimer = setTimeout(() => {
+
+    query = $("search").value.trim();
+
+    loadTracks(true);
+
+  }, SEARCH_DELAY_MS);
+});
+
+$("sort").addEventListener("change", () => {
+
+  sortBy = $("sort").value;
+
+  // Para títulos y artistas es más natural empezar de la A a la Z
+  if(["title", "artist", "album"].includes(sortBy)){
+    sortOrder = "asc";
+  }else{
+    sortOrder = "desc";
+  }
+
+  $("orderBtn").textContent = sortOrder === "asc" ? "▲" : "▼";
+
+  loadTracks(true);
+});
+
+$("orderBtn").onclick = () => {
+
+  sortOrder = sortOrder === "asc" ? "desc" : "asc";
+
+  $("orderBtn").textContent = sortOrder === "asc" ? "▲" : "▼";
+
+  loadTracks(true);
+};
+
+document.addEventListener("keydown", event => {
+
+  if(event.key === "Escape"){
+
+    if($("dialog").classList.contains("show")){
+
+      $("dlgCancel").click();
+
+      return;
+    }
+
+    if($("uploadModal").classList.contains("show")){
+
+      closeUpload();
+
+      return;
+    }
+
+    closeEdit();
+    closeBannerModal();
+
+    return;
+  }
+
+  // Barra espaciadora: pausar o reproducir (si no estás escribiendo)
+  if(event.code === "Space"){
+
+    const tag = (document.activeElement?.tagName || "").toLowerCase();
+
+    const typing = ["input", "textarea", "select", "button"].includes(tag);
+
+    const modalOpen = document.querySelector(".modal.show");
+
+    if(!typing && !modalOpen){
+
+      event.preventDefault();
+
+      togglePlay();
+    }
+  }
+});
+
+// Avisa si se intenta cerrar la página mientras se sube una canción
+window.addEventListener("beforeunload", event => {
+
+  if(uploadXhr){
+
+    event.preventDefault();
+
+    event.returnValue = "";
+  }
+});
+
+
+/* ============================================================
+   START
+============================================================ */
+
+(async function(){
+
+  // Volumen guardado
+  let savedVolume = 80;
+
+  try{
+
+    const stored = localStorage.getItem(VOLUME_KEY);
+
+    if(stored !== null){
+      savedVolume = Math.min(100, Math.max(0, Number(stored) || 0));
+    }
+
+  }catch(error){}
+
+  $("volumeBar").value = savedVolume;
+
+  audio.volume = savedVolume / 100;
+
+  refreshPlayButtons();
+
+  const authenticated = await loadMe();
+
+  if(!authenticated){
+    return;
+  }
+
+  $("app").style.display = "grid";
+
+  applyBanner(currentBannerSrc());
+
+  await Promise.all([
+    loadLimits(),
+    loadStorage(),
+    loadTracks(true)
+  ]);
+
+})();
+</script>
+
+</body>
+</html>

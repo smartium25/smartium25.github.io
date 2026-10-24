@@ -309,16 +309,16 @@
         // REDIRECCIÓN A KN FOUNDATION
         // =========================================================
 
-        function redirectToKnFoundation() {
-    const currentUrl = new URL(window.location.href);
-    currentUrl.searchParams.delete("token");
+       function redirectToKnFoundation() {
+    const authUrl = new URL(URLS.auth);
 
-    const authUrl = new URL(KN_FOUNDATION_URL);
-    authUrl.searchParams.set("redirect", currentUrl.toString());
+    authUrl.searchParams.set(
+        "redirect",
+        window.location.href
+    );
 
     window.location.replace(authUrl.toString());
 }
-
 
         // =========================================================
         // OBTENER USUARIO

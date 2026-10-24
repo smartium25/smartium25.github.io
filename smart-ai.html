@@ -1,0 +1,725 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta name="theme-color" content="#11151a">
+  <title>Smart AI · Smart Ecosystem</title>
+  <style>
+    :root{
+      color-scheme:dark;
+      --bg:#11151a;
+      --sidebar:#151a20;
+      --panel:#191f26;
+      --panel-2:#202730;
+      --panel-3:#252d37;
+      --border:#2d3641;
+      --text:#f2f5f8;
+      --muted:#97a3b1;
+      --muted-2:#707d8c;
+      --cyan:#00e5f2;
+      --cyan-soft:rgba(0,229,242,.12);
+      --green:#42d66f;
+      --red:#ff6875;
+      --radius:14px;
+      --shadow:0 18px 60px rgba(0,0,0,.28);
+    }
+    *{box-sizing:border-box}
+    html,body{height:100%;width:100%;margin:0}
+    body{font-family:Inter,Segoe UI,Arial,sans-serif;background:var(--bg);color:var(--text);overflow:hidden}
+    button,input,textarea{font:inherit}
+    button{cursor:pointer}
+    button:focus-visible,input:focus-visible,textarea:focus-visible{outline:2px solid var(--cyan);outline-offset:2px}
+    a{color:inherit;text-decoration:none}
+    .app{height:100dvh;width:100%;display:grid;grid-template-columns:278px minmax(0,1fr);background:var(--bg)}
+    .sidebar{min-width:0;background:var(--sidebar);border-right:1px solid var(--border);display:flex;flex-direction:column;padding:18px 13px 13px;gap:16px;overflow:hidden}
+    .brand{display:flex;align-items:center;gap:11px;padding:2px 9px 10px}
+    .brand-mark{width:39px;height:39px;flex:none;border-radius:12px;display:grid;place-items:center;color:#051216;background:var(--cyan);font-size:24px;font-weight:900;box-shadow:0 0 24px rgba(0,229,242,.15)}
+    .brand-name{font-size:17px;font-weight:800;letter-spacing:.15px}
+    .brand-sub{font-size:11px;color:var(--muted);margin-top:3px;letter-spacing:.65px;text-transform:uppercase}
+    .new-chat{width:100%;height:44px;border:1px solid rgba(0,229,242,.38);border-radius:12px;background:var(--cyan-soft);color:var(--text);display:flex;align-items:center;justify-content:center;gap:9px;font-weight:700;transition:.15s}
+    .new-chat:hover{background:rgba(0,229,242,.2);border-color:var(--cyan)}
+    .new-chat .plus{font-size:22px;line-height:1;color:var(--cyan)}
+    .section-label{padding:1px 10px 6px;font-size:10px;letter-spacing:1.2px;text-transform:uppercase;color:var(--muted-2);font-weight:800}
+    .search-wrap{position:relative}
+    .search-wrap .search-icon{position:absolute;left:12px;top:50%;transform:translateY(-50%);color:var(--muted);font-size:15px;pointer-events:none}
+    .search{width:100%;height:38px;background:#10151a;border:1px solid var(--border);border-radius:10px;color:var(--text);padding:0 12px 0 34px;outline:none}
+    .search::placeholder{color:#697482}
+    .search:focus{border-color:#39717a}
+    .chat-section{display:flex;flex-direction:column;min-height:0;flex:1;gap:6px}
+    .chat-list{flex:1;min-height:0;overflow:auto;display:flex;flex-direction:column;gap:4px;padding-right:2px}
+    .chat-list::-webkit-scrollbar,.messages::-webkit-scrollbar,.pdf-list::-webkit-scrollbar{width:6px}
+    .chat-list::-webkit-scrollbar-thumb,.messages::-webkit-scrollbar-thumb,.pdf-list::-webkit-scrollbar-thumb{background:#35404b;border-radius:8px}
+    .chat-item{min-height:42px;display:flex;align-items:center;gap:6px;padding:5px 6px 5px 10px;border:1px solid transparent;border-radius:10px;color:#cbd3dc;background:transparent;text-align:left;transition:.15s}
+    .chat-item:hover{background:#1c2229}
+    .chat-item.active{background:#212a32;border-color:#303d47;color:var(--text)}
+    .chat-item .chat-icon{color:var(--muted);font-size:15px;flex:none;width:19px;text-align:center}
+    .chat-item.active .chat-icon{color:var(--cyan)}
+    .chat-title{overflow:hidden;text-overflow:ellipsis;white-space:nowrap;flex:1;font-size:13px;min-width:0}
+    .chat-delete{width:26px;height:26px;flex:none;display:grid;place-items:center;color:#7f8b98;background:transparent;border-radius:7px;border:0;opacity:.15;font-size:17px}
+    .chat-item:hover .chat-delete,.chat-item.active .chat-delete{opacity:1}
+    .chat-delete:hover{color:var(--red);background:rgba(255,104,117,.1)}
+    .empty-list{color:var(--muted-2);font-size:12px;padding:12px 10px;line-height:1.5}
+    .side-bottom{display:flex;flex-direction:column;gap:7px;border-top:1px solid var(--border);padding-top:12px}
+    .side-link,.side-action{min-height:39px;display:flex;align-items:center;gap:10px;padding:0 10px;border-radius:10px;border:1px solid transparent;background:transparent;color:#bec8d2;text-align:left;font-size:13px}
+    .side-link:hover,.side-action:hover{background:#202730;color:var(--text)}
+    .side-link .link-icon,.side-action .link-icon{width:20px;text-align:center;color:var(--cyan);font-size:16px}
+    .user-box{margin-top:4px;padding:11px 9px 2px;border-top:1px solid var(--border);display:flex;align-items:center;gap:10px;min-width:0}
+    .avatar{width:34px;height:34px;border-radius:50%;display:grid;place-items:center;flex:none;background:#26343c;color:var(--cyan);font-size:13px;font-weight:800;border:1px solid #3c4a54}
+    .user-data{flex:1;min-width:0}
+    .username{font-size:12px;font-weight:700;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+    .user-status{display:flex;align-items:center;gap:6px;font-size:10px;color:var(--muted);margin-top:3px}
+    .dot{width:6px;height:6px;border-radius:50%;background:var(--green);box-shadow:0 0 8px rgba(66,214,111,.3)}
+    .logout{color:#8f9aa6;background:transparent;border:0;font-size:17px;padding:6px;border-radius:7px}
+    .logout:hover{color:var(--red);background:rgba(255,104,117,.08)}
+
+    .main{min-width:0;min-height:0;display:flex;flex-direction:column;position:relative;background:radial-gradient(ellipse at 52% -26%,rgba(0,229,242,.055),transparent 43%),var(--bg)}
+    .topbar{height:68px;flex:none;border-bottom:1px solid var(--border);display:flex;align-items:center;justify-content:space-between;gap:12px;padding:0 26px;background:rgba(17,21,26,.87)}
+    .topbar-left{display:flex;align-items:center;gap:12px;min-width:0}
+    .mobile-menu{display:none;width:36px;height:36px;border:1px solid var(--border);border-radius:10px;color:var(--text);background:var(--panel)}
+    .page-title{font-size:15px;font-weight:800;letter-spacing:.1px}
+    .page-subtitle{font-size:11px;color:var(--muted);margin-top:3px}
+    .topbar-right{display:flex;align-items:center;gap:9px}
+    .connection-pill{display:flex;align-items:center;gap:7px;padding:7px 10px;border:1px solid var(--border);background:#171d23;color:var(--muted);border-radius:999px;font-size:11px;white-space:nowrap}
+    .connection-pill .dot{width:6px;height:6px;background:#64717f;box-shadow:none}
+    .connection-pill.online .dot{background:var(--green);box-shadow:0 0 8px rgba(66,214,111,.3)}
+    .top-button{height:35px;border:1px solid var(--border);border-radius:9px;background:var(--panel);color:#c6d0da;padding:0 11px;font-size:12px}
+    .top-button:hover{border-color:#41505d;color:var(--text)}
+
+    .conversation{flex:1;min-height:0;display:flex;flex-direction:column;align-items:center;width:100%;overflow:hidden}
+    .messages{width:100%;max-width:900px;flex:1;min-height:0;overflow:auto;padding:28px 27px 20px;display:flex;flex-direction:column;gap:23px;scroll-behavior:smooth}
+    .welcome{margin:auto;max-width:650px;width:100%;padding:24px 10px 38px;text-align:center}
+    .welcome-symbol{width:64px;height:64px;margin:0 auto 20px;border-radius:21px;display:grid;place-items:center;background:linear-gradient(145deg,#18252b,#1c272e);border:1px solid #34434a;color:var(--cyan);font-size:33px;box-shadow:0 0 55px rgba(0,229,242,.06)}
+    .welcome h1{margin:0;font-size:clamp(26px,3vw,34px);letter-spacing:-.8px;font-weight:800}
+    .welcome h1 span{color:var(--cyan)}
+    .welcome p{font-size:14px;color:var(--muted);line-height:1.7;margin:13px auto 26px;max-width:490px}
+    .suggestions{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:10px;text-align:left}
+    .suggestion{background:rgba(28,35,43,.85);border:1px solid #2a343e;border-radius:13px;padding:14px;min-height:82px;color:var(--text);display:flex;align-items:flex-start;gap:11px;text-align:left;transition:.15s}
+    .suggestion:hover{background:#202a33;border-color:#3c6067;transform:translateY(-1px)}
+    .suggestion-icon{width:31px;height:31px;flex:none;border-radius:9px;display:grid;place-items:center;background:#24343a;color:var(--cyan);font-size:16px}
+    .suggestion strong{display:block;font-size:12px;margin:1px 0 5px}
+    .suggestion small{display:block;font-size:11px;line-height:1.45;color:var(--muted)}
+    .message-row{display:flex;align-items:flex-start;gap:12px;width:100%;animation:appear .17s ease-out}
+    @keyframes appear{from{opacity:0;transform:translateY(4px)}to{opacity:1;transform:translateY(0)}}
+    .message-row.user{justify-content:flex-end}
+    .message-avatar{width:30px;height:30px;border-radius:10px;flex:none;display:grid;place-items:center;background:#202a31;border:1px solid #2f3c45;color:var(--cyan);font-size:14px;font-weight:800}
+    .message-row.user .message-avatar{background:#26343b;color:#dbeff1}
+    .message-content{min-width:0;max-width:calc(100% - 45px);display:flex;flex-direction:column;gap:6px;align-items:flex-start}
+    .message-row.user .message-content{align-items:flex-end}
+    .message-name{font-size:10px;font-weight:700;color:var(--muted);padding:0 3px;letter-spacing:.2px}
+    .bubble{max-width:100%;border:1px solid #27313b;background:#191f26;border-radius:4px 14px 14px 14px;padding:12px 15px;color:#e7ecf1;font-size:13px;line-height:1.7;white-space:pre-wrap;overflow-wrap:anywhere;box-shadow:0 5px 14px rgba(0,0,0,.07)}
+    .message-row.user .bubble{background:#1e2930;border-color:#2b424a;border-radius:14px 4px 14px 14px;color:#f2f7f8}
+    .message-row.error .bubble{border-color:rgba(255,104,117,.32);color:#ffc4c9}
+    .typing{display:flex;gap:5px;padding:8px 2px}
+    .typing span{width:6px;height:6px;border-radius:50%;background:var(--cyan);animation:bounce 1s infinite ease-in-out;opacity:.65}
+    .typing span:nth-child(2){animation-delay:.15s}.typing span:nth-child(3){animation-delay:.3s}
+    @keyframes bounce{0%,60%,100%{transform:translateY(0)}30%{transform:translateY(-5px)}}
+    .composer-area{width:100%;max-width:900px;flex:none;padding:10px 27px 21px}
+    .attachment-chip{display:none;align-items:center;justify-content:space-between;gap:8px;padding:8px 12px;background:#1a242b;border:1px solid #30424b;color:#cfe7e9;border-radius:10px;font-size:11px;margin-bottom:8px}
+    .attachment-chip.visible{display:flex}
+    .attachment-remove{border:0;background:transparent;color:var(--muted);font-size:16px}
+    .composer{background:#181e24;border:1px solid #303a45;border-radius:17px;box-shadow:0 10px 35px rgba(0,0,0,.2);padding:9px 10px 8px;transition:border-color .15s}
+    .composer:focus-within{border-color:#3a6970;box-shadow:0 0 0 2px rgba(0,229,242,.045),0 10px 35px rgba(0,0,0,.2)}
+    .composer textarea{display:block;width:100%;resize:none;min-height:30px;max-height:180px;background:transparent;border:0;outline:0;padding:7px 7px 9px;color:var(--text);font-size:13px;line-height:1.55}
+    .composer textarea::placeholder{color:#7e8995}
+    .composer-tools{display:flex;align-items:center;justify-content:space-between;gap:8px}
+    .composer-left,.composer-right{display:flex;align-items:center;gap:7px}
+    .tool-button{height:32px;min-width:32px;padding:0 10px;background:transparent;border:1px solid transparent;border-radius:9px;color:#9eabb8;font-size:11px;display:flex;align-items:center;justify-content:center;gap:7px}
+    .tool-button:hover{background:#252e37;color:var(--text);border-color:#35414d}
+    .send-button{width:35px;height:35px;border:0;border-radius:11px;background:var(--cyan);color:#071316;font-size:17px;font-weight:900;display:grid;place-items:center;transition:.15s}
+    .send-button:hover{background:#6af4fa;transform:translateY(-1px)}
+    .send-button:disabled{opacity:.4;cursor:not-allowed;transform:none}
+    .hint{text-align:center;color:#687582;font-size:10px;margin-top:10px;line-height:1.5}
+    .toast{position:fixed;z-index:50;left:50%;bottom:24px;transform:translate(-50%,12px);opacity:0;pointer-events:none;max-width:min(90vw,550px);padding:11px 15px;border:1px solid #3a4651;border-radius:11px;background:#202830;color:var(--text);font-size:12px;box-shadow:var(--shadow);transition:opacity .2s,transform .2s}
+    .toast.show{opacity:1;transform:translate(-50%,0)}
+    dialog{width:min(560px,calc(100vw - 28px));max-height:min(80dvh,650px);padding:0;border:1px solid #34414d;border-radius:17px;background:#171d23;color:var(--text);box-shadow:var(--shadow)}
+    dialog::backdrop{background:rgba(0,0,0,.68);backdrop-filter:blur(4px)}
+    .dialog-head{padding:18px 20px;border-bottom:1px solid var(--border);display:flex;align-items:center;justify-content:space-between;gap:12px}
+    .dialog-head h2{font-size:15px;margin:0}
+    .dialog-head p{font-size:11px;color:var(--muted);margin:5px 0 0}
+    .dialog-close{width:29px;height:29px;border-radius:8px;background:#252d36;color:#bcc6cf;border:1px solid #343d47;font-size:17px}
+    .dialog-body{padding:18px 20px 20px}
+    .dialog-body textarea{width:100%;min-height:190px;resize:vertical;background:#10151a;color:var(--text);border:1px solid #303a45;border-radius:11px;padding:12px;font-size:12px;line-height:1.6}
+    .dialog-footer{display:flex;justify-content:flex-end;gap:8px;margin-top:12px}
+    .primary-button,.secondary-button{height:36px;padding:0 14px;border-radius:9px;font-size:12px;font-weight:700}
+    .primary-button{background:var(--cyan);color:#071316;border:0}.primary-button:hover{background:#6af4fa}
+    .secondary-button{background:#242c35;color:#cbd4dc;border:1px solid #38424e}.secondary-button:hover{background:#2c3640}
+    .pdf-list{display:flex;flex-direction:column;gap:7px;max-height:420px;overflow:auto}
+    .pdf-item{display:flex;align-items:center;gap:10px;text-align:left;border:1px solid #2d3842;border-radius:11px;padding:11px;background:#1d242b;color:var(--text)}
+    .pdf-item:hover{border-color:#3e6a70;background:#212d34}
+    .pdf-symbol{width:34px;height:37px;display:grid;place-items:center;border-radius:8px;color:#ff969d;background:rgba(255,104,117,.1);font-size:11px;font-weight:900;flex:none}
+    .pdf-name{font-size:12px;font-weight:700;overflow-wrap:anywhere}
+    .pdf-meta{font-size:10px;color:var(--muted);margin-top:4px}
+    .dialog-status{font-size:12px;color:var(--muted);padding:8px 2px;line-height:1.6}
+    .mobile-overlay{display:none}
+    @media(max-width:780px){
+      .app{grid-template-columns:minmax(0,1fr)}
+      .sidebar{position:fixed;z-index:30;top:0;bottom:0;left:0;width:min(300px,86vw);transform:translateX(-105%);transition:transform .22s ease;box-shadow:var(--shadow)}
+      .sidebar.open{transform:translateX(0)}
+      .mobile-overlay.show{display:block;position:fixed;z-index:20;inset:0;background:rgba(0,0,0,.55)}
+      .mobile-menu{display:block}
+      .topbar{height:60px;padding:0 14px}
+      .connection-pill{font-size:10px;padding:7px 8px}
+      .top-button{font-size:11px;padding:0 8px}
+      .messages{padding:22px 15px 16px}
+      .composer-area{padding:8px 12px 15px}
+      .welcome{padding:18px 0 28px}
+      .welcome-symbol{width:56px;height:56px;border-radius:18px}
+      .welcome p{font-size:13px}
+      .suggestions{grid-template-columns:1fr}
+      .suggestion{min-height:68px;padding:12px}
+      .tool-button .tool-label{display:none}
+    }
+    @media(max-width:430px){
+      .page-subtitle{display:none}
+      .connection-pill{max-width:110px;overflow:hidden}
+      .connection-pill span:last-child{overflow:hidden;text-overflow:ellipsis}
+      .topbar{gap:6px}
+      .topbar-right{gap:5px}
+      .message-content{max-width:calc(100% - 40px)}
+      .bubble{padding:10px 12px;font-size:12px}
+      .composer-left{gap:2px}
+      .tool-button{padding:0 7px}
+    }
+  </style>
+</head>
+<body>
+  <div class="app">
+    <aside class="sidebar" id="sidebar" aria-label="Barra lateral">
+      <a class="brand" href="smart-ai.html" aria-label="Smart AI inicio">
+        <div class="brand-mark">✦</div>
+        <div><div class="brand-name">Smart AI</div><div class="brand-sub">Smart Ecosystem</div></div>
+      </a>
+
+      <button class="new-chat" id="newChatBtn"><span class="plus">＋</span><span>Nuevo chat</span></button>
+
+      <div class="search-wrap"><span class="search-icon">⌕</span><input class="search" id="chatSearch" type="search" placeholder="Buscar conversación…" autocomplete="off"></div>
+
+      <section class="chat-section">
+        <div class="section-label">Tus conversaciones</div>
+        <div class="chat-list" id="chatList"><div class="empty-list">Cargando conversaciones del servidor…</div></div>
+      </section>
+
+      <div class="side-bottom">
+        <div class="section-label">Ecosistema Smart</div>
+        <button class="side-action" id="memoryBtn"><span class="link-icon">◈</span><span>Memoria de Smart AI</span></button>
+        <button class="side-action" id="smartChatBtn"><span class="link-icon">▤</span><span>Consultar Smart-Chat</span></button>
+        <button class="side-action" id="smartCloudBtn"><span class="link-icon">▱</span><span>Buscar PDF en Smart-Cloud</span></button>
+        <a class="side-link" href="smart-chat.html"><span class="link-icon">↗</span><span>Abrir Smart-Chat</span></a>
+        <a class="side-link" href="smart-cloud.html"><span class="link-icon">↗</span><span>Abrir Smart-Cloud</span></a>
+      </div>
+
+      <div class="user-box">
+        <div class="avatar" id="userAvatar">S</div>
+        <div class="user-data"><div class="username" id="usernameLabel">Conectando…</div><div class="user-status"><span class="dot"></span><span>Smart-Account</span></div></div>
+        <button class="logout" id="logoutBtn" title="Cerrar sesión" aria-label="Cerrar sesión">↪</button>
+      </div>
+    </aside>
+    <div class="mobile-overlay" id="mobileOverlay"></div>
+
+    <main class="main">
+      <header class="topbar">
+        <div class="topbar-left">
+          <button class="mobile-menu" id="mobileMenuBtn" aria-label="Abrir menú">☰</button>
+          <div><div class="page-title" id="conversationTitle">Smart AI</div><div class="page-subtitle">Tu asistente conectado al ecosistema Smart</div></div>
+        </div>
+        <div class="topbar-right">
+          <div class="connection-pill" id="connectionPill"><span class="dot"></span><span id="connectionLabel">Conectando API</span></div>
+          <button class="top-button" id="headerMemoryBtn" title="Gestionar memoria">Memoria</button>
+        </div>
+      </header>
+
+      <section class="conversation" aria-label="Conversación con Smart AI">
+        <div class="messages" id="messages">
+          <div class="welcome" id="welcomePanel">
+            <div class="welcome-symbol">✦</div>
+            <h1>Hola, soy <span>Smart AI</span></h1>
+            <p>Tu asistente del ecosistema Smart. Puedes preguntarme algo, consultar conversaciones de Smart-Chat o resumir documentos guardados en Smart-Cloud.</p>
+            <div class="suggestions">
+              <button class="suggestion" data-prompt="Hey, ¿qué significa lo que me mandó @pedrito en Smart-Chat?"><span class="suggestion-icon">▤</span><span><strong>Entender un mensaje</strong><small>Interpreta algo que te mandaron en Smart-Chat.</small></span></button>
+              <button class="suggestion" id="welcomePdfBtn"><span class="suggestion-icon">▱</span><span><strong>Resumir un PDF</strong><small>Busca un documento de tu Smart-Cloud y resume su contenido.</small></span></button>
+              <button class="suggestion" data-prompt="Explícame este tema paso a paso y dame un ejemplo sencillo."><span class="suggestion-icon">⌘</span><span><strong>Aprender algo nuevo</strong><small>Explicaciones claras, ejemplos y pasos.</small></span></button>
+              <button class="suggestion" data-prompt="Ayúdame a organizar mis ideas en un plan con pasos concretos."><span class="suggestion-icon">☷</span><span><strong>Organizar ideas</strong><small>Convierte una idea en un plan fácil de seguir.</small></span></button>
+            </div>
+          </div>
+        </div>
+
+        <div class="composer-area">
+          <div class="attachment-chip" id="attachmentChip"><span id="attachmentName">Archivo adjunto</span><button class="attachment-remove" id="removeAttachment" title="Quitar archivo">×</button></div>
+          <div class="composer">
+            <textarea id="messageInput" rows="1" placeholder="Escribe un mensaje a Smart AI…" aria-label="Mensaje"></textarea>
+            <div class="composer-tools">
+              <div class="composer-left">
+                <button class="tool-button" id="attachBtn" title="Adjuntar texto, Markdown, CSV o JSON"><span>＋</span><span class="tool-label">Adjuntar archivo</span></button>
+                <input id="fileInput" type="file" accept=".txt,.md,.csv,.json,text/plain,text/markdown,text/csv,application/json" hidden>
+                <button class="tool-button" id="composerChatBtn" title="Consultar Smart-Chat"><span>▤</span><span class="tool-label">Smart-Chat</span></button>
+                <button class="tool-button" id="composerCloudBtn" title="Buscar PDF en Smart-Cloud"><span>▱</span><span class="tool-label">Smart-Cloud</span></button>
+              </div>
+              <div class="composer-right"><button class="send-button" id="sendBtn" aria-label="Enviar mensaje" title="Enviar">↑</button></div>
+            </div>
+          </div>
+          <div class="hint">Smart AI puede equivocarse. Verifica la información importante. Tus conversaciones se guardan en la API de Smart AI, no en el almacenamiento local.</div>
+        </div>
+      </section>
+    </main>
+  </div>
+
+  <dialog id="memoryDialog">
+    <div class="dialog-head"><div><h2>Memoria de Smart AI</h2><p>Se guarda en Smart AI API vinculada a tu cuenta.</p></div><button class="dialog-close" data-close="memoryDialog" aria-label="Cerrar">×</button></div>
+    <div class="dialog-body"><textarea id="memoryText" placeholder="Preferencias o información que Smart AI debería recordar…"></textarea><div class="dialog-footer"><button class="secondary-button" data-close="memoryDialog">Cancelar</button><button class="primary-button" id="saveMemoryBtn">Guardar memoria</button></div></div>
+  </dialog>
+
+  <dialog id="pdfDialog">
+    <div class="dialog-head"><div><h2>PDF de Smart-Cloud</h2><p>Selecciona un PDF privado de tu cuenta para resumirlo.</p></div><button class="dialog-close" data-close="pdfDialog" aria-label="Cerrar">×</button></div>
+    <div class="dialog-body"><div id="pdfList" class="pdf-list"><div class="dialog-status">Cargando documentos…</div></div></div>
+  </dialog>
+
+  <div class="toast" id="toast" role="status" aria-live="polite"></div>
+
+  <script src="url.js"></script>
+  <script src="smart_ai_client.js"></script>
+  <script>
+  (() => {
+    'use strict';
+
+    const $ = id => document.getElementById(id);
+    const state = { user:null, chats:[], activeChat:null, memory:'', sending:false, attachment:null, toastTimer:null };
+
+    function getUrls(){
+      try { if(typeof URLS !== 'undefined' && URLS) return URLS; } catch(_) {}
+      return {};
+    }
+
+    function receiveToken(){
+      const url = new URL(window.location.href);
+      const queryToken = url.searchParams.get('token');
+      let hashToken = '';
+      if(url.hash && url.hash.includes('token=')){
+        const hashParams = new URLSearchParams(url.hash.slice(1));
+        hashToken = hashParams.get('token') || '';
+      }
+      const token = queryToken || hashToken;
+      if(token) localStorage.setItem('smart_token', token);
+      if(queryToken || hashToken){
+        url.searchParams.delete('token');
+        if(hashToken) url.hash = '';
+        history.replaceState({}, document.title, url.pathname + url.search + url.hash);
+      }
+    }
+
+    function token(){ return localStorage.getItem('smart_token') || ''; }
+
+    function authHeaders(){
+      const t = token();
+      return t ? {Authorization:'Smart-Token ' + t, Accept:'application/json'} : {Accept:'application/json'};
+    }
+
+    function showToast(message){
+      const el = $('toast');
+      el.textContent = message;
+      el.classList.add('show');
+      clearTimeout(state.toastTimer);
+      state.toastTimer = setTimeout(() => el.classList.remove('show'), 3200);
+    }
+
+    function getAuthUrl(){
+      const urls = getUrls();
+      return urls.auth || '/auth/';
+    }
+
+    function redirectToAuth(){
+      const destination = new URL(window.location.href);
+      destination.searchParams.delete('token');
+      const auth = new URL(getAuthUrl(), window.location.href);
+      auth.searchParams.set('redirect', destination.toString());
+      window.location.replace(auth.toString());
+    }
+
+    async function checkAccount(){
+      if(!token()) { redirectToAuth(); return false; }
+      const base = String(getUrls().account || '').replace(/\/+$/, '');
+      if(!base) throw new Error('Falta URLS.account en url.js.');
+      let response;
+      try{
+        response = await fetch(base + '/api/me', {headers:authHeaders(),cache:'no-store'});
+      }catch(_){ throw new Error('No se pudo conectar con Smart-Account API.'); }
+      let data = {};
+      try{ data = await response.json(); }catch(_){}
+      if(response.status === 401 || response.status === 403){
+        localStorage.removeItem('smart_token');
+        redirectToAuth();
+        return false;
+      }
+      if(!response.ok) throw new Error(data.detail || 'Smart-Account no pudo validar tu sesión.');
+      state.user = data.user || data;
+      if(!state.user || !state.user.username) throw new Error('Smart-Account no devolvió user.username.');
+      $('usernameLabel').textContent = '@' + state.user.username;
+      $('userAvatar').textContent = String(state.user.username).slice(0,1).toUpperCase();
+      return true;
+    }
+
+    function normalizeMessage(m){
+      if(!m || typeof m !== 'object') return null;
+      let role = String(m.role || m.sender_role || m.type || '').toLowerCase();
+      if(['assistant','ai','smart-ai','smart_ai','bot'].includes(role)) role = 'assistant';
+      else role = 'user';
+      const content = typeof m.content === 'string' ? m.content :
+        typeof m.text === 'string' ? m.text :
+        typeof m.message === 'string' ? m.message : '';
+      if(!content.trim()) return null;
+      return {role,content};
+    }
+
+    function normalizeChat(chat){
+      const id = String(chat.id || chat.chat_id || crypto.randomUUID().replace(/-/g,''));
+      const messages = (Array.isArray(chat.messages) ? chat.messages : []).map(normalizeMessage).filter(Boolean);
+      return {
+        id: id.replace(/[^a-zA-Z0-9_-]/g,'').slice(0,80) || crypto.randomUUID().replace(/-/g,''),
+        title: String(chat.title || chat.name || (messages.find(m=>m.role==='user')?.content || 'Nuevo chat')).slice(0,120),
+        messages,
+        updated_at: chat.updated_at || chat.created_at || new Date().toISOString()
+      };
+    }
+
+    function legacyValues(username){
+      const chatKey = 'sia:' + username + ':chats';
+      const memoryKey = 'sia:' + username + ':memory';
+      let chats = [];
+      let memory = '';
+      const rawChats = localStorage.getItem(chatKey);
+      if(rawChats){
+        try{
+          const parsed = JSON.parse(rawChats);
+          chats = Array.isArray(parsed) ? parsed :
+            parsed && typeof parsed === 'object' ? Object.values(parsed) : [];
+        }catch(_){}
+      }
+      const rawMemory = localStorage.getItem(memoryKey);
+      if(rawMemory){
+        try{
+          const parsed = JSON.parse(rawMemory);
+          memory = typeof parsed === 'string' ? parsed :
+            typeof parsed?.memory === 'string' ? parsed.memory :
+            typeof parsed?.content === 'string' ? parsed.content : rawMemory;
+        }catch(_){ memory = rawMemory; }
+      }
+      return {chatKey,memoryKey,chats,memory,hasOldData:!!rawChats || !!rawMemory};
+    }
+
+    async function migrateLegacyIfNeeded(){
+      if(!state.user?.username) return;
+      const old = legacyValues(state.user.username);
+      if(!old.hasOldData) return;
+      let allSaved = true;
+      for(const item of old.chats){
+        if(!item || typeof item !== 'object') continue;
+        const chat = normalizeChat(item);
+        // API ids accept only letters, numbers, underscore and hyphen.
+        try{ await SmartAIStore.saveChat(chat); }
+        catch(error){ allSaved = false; console.warn('No se pudo migrar un chat antiguo:',error); }
+      }
+      if(old.memory.trim()){
+        try{ await SmartAIStore.saveMemory(old.memory); }
+        catch(error){ allSaved = false; console.warn('No se pudo migrar la memoria anterior:',error); }
+      }
+      if(allSaved){
+        localStorage.removeItem(old.chatKey);
+        localStorage.removeItem(old.memoryKey);
+      }else{
+        showToast('No se pudieron migrar todos los datos antiguos; se conservaron para no perderlos.');
+      }
+    }
+
+    async function loadRemoteChats(){
+      const chats = await SmartAIStore.loadChats();
+      state.chats = chats.map(normalizeChat);
+      renderChatList();
+      if(state.chats.length){
+        await selectChat(state.chats[0].id, false);
+      }else{
+        await createChat();
+      }
+    }
+
+    async function loadRemoteMemory(){
+      state.memory = await SmartAIStore.loadMemory();
+    }
+
+    function renderChatList(){
+      const list = $('chatList');
+      const query = $('chatSearch').value.trim().toLocaleLowerCase();
+      list.replaceChildren();
+      const shown = state.chats.filter(c => !query || (c.title || '').toLocaleLowerCase().includes(query));
+      if(!shown.length){
+        const empty = document.createElement('div');
+        empty.className = 'empty-list';
+        empty.textContent = query ? 'No hay conversaciones con ese nombre.' : 'Aún no hay conversaciones guardadas.';
+        list.appendChild(empty); return;
+      }
+      for(const chat of shown){
+        const row = document.createElement('div');
+        row.className = 'chat-item' + (state.activeChat?.id === chat.id ? ' active' : '');
+        const open = document.createElement('button');
+        open.className = 'chat-item';
+        open.style.cssText = 'min-width:0;flex:1;border:0;padding:0;background:transparent;';
+        open.setAttribute('aria-label','Abrir ' + chat.title);
+        const icon = document.createElement('span'); icon.className='chat-icon'; icon.textContent='▤';
+        const title = document.createElement('span'); title.className='chat-title'; title.textContent=chat.title || 'Nuevo chat';
+        open.append(icon,title);
+        open.addEventListener('click',()=>selectChat(chat.id));
+        const del = document.createElement('button'); del.className='chat-delete'; del.textContent='×'; del.title='Eliminar conversación'; del.setAttribute('aria-label','Eliminar ' + chat.title);
+        del.addEventListener('click', async event => { event.stopPropagation(); await removeChat(chat.id); });
+        row.append(open,del);
+        list.appendChild(row);
+      }
+    }
+
+    function renderMessages(){
+      const container = $('messages');
+      container.replaceChildren();
+      const chat = state.activeChat;
+      $('conversationTitle').textContent = chat?.title || 'Smart AI';
+      if(!chat || !chat.messages.length){
+        const welcome = $('welcomePanel').cloneNode(true);
+        welcome.style.display='block';
+        welcome.querySelectorAll('[data-prompt]').forEach(btn=>btn.addEventListener('click',()=>setPrompt(btn.dataset.prompt)));
+        const pdfBtn = welcome.querySelector('#welcomePdfBtn');
+        if(pdfBtn) pdfBtn.addEventListener('click',openPdfPicker);
+        container.appendChild(welcome);
+        return;
+      }
+      for(const message of chat.messages){
+        const row = document.createElement('div');
+        row.className = 'message-row ' + (message.role === 'user' ? 'user' : 'assistant');
+        const avatar = document.createElement('div'); avatar.className='message-avatar'; avatar.textContent=message.role==='user' ? String(state.user?.username || 'U').slice(0,1).toUpperCase() : '✦';
+        const content = document.createElement('div'); content.className='message-content';
+        const name = document.createElement('div'); name.className='message-name'; name.textContent=message.role==='user' ? 'Tú' : 'Smart AI';
+        const bubble = document.createElement('div'); bubble.className='bubble'; bubble.textContent=message.content;
+        content.append(name,bubble);
+        if(message.role === 'user') row.append(content,avatar); else row.append(avatar,content);
+        container.appendChild(row);
+      }
+      if(state.sending){
+        const row=document.createElement('div');row.className='message-row assistant';
+        const avatar=document.createElement('div');avatar.className='message-avatar';avatar.textContent='✦';
+        const content=document.createElement('div');content.className='message-content';
+        const name=document.createElement('div');name.className='message-name';name.textContent='Smart AI está pensando';
+        const typing=document.createElement('div');typing.className='typing';typing.innerHTML='<span></span><span></span><span></span>';
+        content.append(name,typing);row.append(avatar,content);container.appendChild(row);
+      }
+      container.scrollTop=container.scrollHeight;
+    }
+
+    function setPrompt(text){
+      $('messageInput').value = text;
+      resizeInput(); $('messageInput').focus();
+    }
+
+    function resizeInput(){
+      const input=$('messageInput'); input.style.height='auto'; input.style.height=Math.min(input.scrollHeight,180)+'px';
+    }
+
+    async function createChat(){
+      const chat = {id:crypto.randomUUID().replace(/-/g,''),title:'Nuevo chat',messages:[],updated_at:new Date().toISOString()};
+      try{
+        await SmartAIStore.saveChat(chat);
+      }catch(error){ showToast('No se pudo crear el chat en Smart AI API: '+error.message); return; }
+      state.chats.unshift(chat); state.activeChat=chat;
+      renderChatList();renderMessages();$('messageInput').focus();closeMobileSidebar();
+    }
+
+    async function selectChat(id,closeMobile=true){
+      try{
+        const remote = await SmartAIStore.loadChat(id);
+        const chat = normalizeChat(remote || state.chats.find(c=>c.id===id) || {id,title:'Nuevo chat',messages:[]});
+        state.activeChat=chat;
+        const index=state.chats.findIndex(c=>c.id===id);
+        if(index>=0) state.chats[index]={...state.chats[index],...chat}; else state.chats.unshift(chat);
+        renderChatList();renderMessages();
+        if(closeMobile) closeMobileSidebar();
+      }catch(error){ showToast('No se pudo abrir la conversación: '+error.message); }
+    }
+
+    async function removeChat(id){
+      const chat=state.chats.find(c=>c.id===id);
+      if(!confirm('¿Eliminar la conversación «'+(chat?.title || 'Nuevo chat')+'» del servidor?')) return;
+      try{
+        await SmartAIStore.deleteChat(id);
+        state.chats=state.chats.filter(c=>c.id!==id);
+        if(state.activeChat?.id===id) state.activeChat=null;
+        renderChatList();
+        if(!state.activeChat){
+          if(state.chats.length) await selectChat(state.chats[0].id,false);
+          else await createChat();
+        }else renderMessages();
+        showToast('Conversación eliminada del servidor.');
+      }catch(error){showToast('No se pudo eliminar: '+error.message);}
+    }
+
+    function upsertActiveChat(){
+      if(!state.activeChat) return;
+      const idx=state.chats.findIndex(c=>c.id===state.activeChat.id);
+      if(idx>=0) state.chats.splice(idx,1);
+      state.activeChat.updated_at=new Date().toISOString();
+      state.chats.unshift(state.activeChat);
+      renderChatList();
+    }
+
+    async function sendMessage(){
+      if(state.sending) return;
+      const raw=$('messageInput').value.trim();
+      if(!raw && !state.attachment) return;
+      if(!state.activeChat){ await createChat(); if(!state.activeChat)return; }
+      let text=raw;
+      if(state.attachment){
+        text += (text ? '\n\n' : '') + 'Archivo adjunto: ' + state.attachment.name + '\n--- CONTENIDO DEL ARCHIVO ---\n' + state.attachment.text + '\n--- FIN DEL ARCHIVO ---';
+      }
+      if(!text.trim()) return;
+      const userMessage={role:'user',content:text};
+      state.activeChat.messages.push(userMessage);
+      if(state.activeChat.title==='Nuevo chat'){
+        state.activeChat.title=(raw || ('Archivo: '+(state.attachment?.name || 'Adjunto'))).replace(/\s+/g,' ').slice(0,54) || 'Nuevo chat';
+      }
+      $('messageInput').value='';resizeInput();state.attachment=null;renderAttachment();
+      state.sending=true;$('sendBtn').disabled=true;upsertActiveChat();renderMessages();
+      try{
+        // Primero asegurar que la pregunta ya está en el servidor.
+        await SmartAIStore.saveChat(state.activeChat);
+        const reply=await SmartAIStore.ask(state.activeChat,{summary:'',memory:state.memory});
+        state.activeChat.messages.push({role:'assistant',content:reply || 'No recibí una respuesta del modelo.'});
+        await SmartAIStore.saveChat(state.activeChat);
+        upsertActiveChat();
+      }catch(error){
+        showToast(error.message || 'No se pudo enviar el mensaje.');
+      }finally{
+        state.sending=false;$('sendBtn').disabled=false;renderChatList();renderMessages();$('messageInput').focus();
+      }
+    }
+
+    function renderAttachment(){
+      const chip=$('attachmentChip');
+      if(state.attachment){ $('attachmentName').textContent=state.attachment.name+' · adjunto temporal';chip.classList.add('visible'); }
+      else chip.classList.remove('visible');
+    }
+
+    async function handleFile(file){
+      if(!file) return;
+      if(file.size>200*1024){showToast('El archivo debe pesar 200 KB o menos.');return;}
+      const ext=(file.name.split('.').pop()||'').toLowerCase();
+      if(!['txt','md','csv','json'].includes(ext)){showToast('Adjunta archivos TXT, Markdown, CSV o JSON. Para un PDF usa Smart-Cloud.');return;}
+      try{
+        const text=await file.text();
+        state.attachment={name:file.name,text};renderAttachment();showToast('Archivo listo. Su contenido se enviará al servidor al mandar el mensaje.');
+      }catch(_){showToast('No se pudo leer el archivo.');}
+    }
+
+    function openDialog(id){ const d=$(id); if(typeof d.showModal==='function') d.showModal(); else d.setAttribute('open',''); }
+    function closeDialog(id){ const d=$(id); if(typeof d.close==='function') d.close(); else d.removeAttribute('open'); }
+
+    async function openMemory(){
+      $('memoryText').value=state.memory;
+      openDialog('memoryDialog');
+      try{state.memory=await SmartAIStore.loadMemory();$('memoryText').value=state.memory;}
+      catch(error){showToast('No se pudo cargar la memoria: '+error.message);}
+    }
+
+    async function saveMemory(){
+      $('saveMemoryBtn').disabled=true;
+      try{
+        state.memory=await SmartAIStore.saveMemory($('memoryText').value);
+        closeDialog('memoryDialog');showToast('Memoria guardada en Smart AI API.');
+      }catch(error){showToast('No se pudo guardar la memoria: '+error.message);}
+      finally{$('saveMemoryBtn').disabled=false;}
+    }
+
+    function openChatHelper(){
+      const target=prompt('Escribe el username exacto de la persona en Smart-Chat (por ejemplo, pedrito):');
+      if(!target || !target.trim()) return;
+      setPrompt('Hey, ¿qué significa lo que me mandó @'+target.trim().replace(/^@/,'')+' en Smart-Chat?');
+      closeMobileSidebar();
+    }
+
+    function formatBytes(bytes){
+      const n=Number(bytes||0);
+      if(n<1024) return n+' B';
+      if(n<1024*1024) return (n/1024).toFixed(1)+' KB';
+      return (n/(1024*1024)).toFixed(1)+' MB';
+    }
+
+    async function openPdfPicker(){
+      openDialog('pdfDialog');
+      const list=$('pdfList');list.replaceChildren();
+      const loading=document.createElement('div');loading.className='dialog-status';loading.textContent='Consultando tus PDF en Smart-Cloud…';list.appendChild(loading);
+      try{
+        const files=await SmartAIStore.listCloudPDFs();list.replaceChildren();
+        if(!files.length){const empty=document.createElement('div');empty.className='dialog-status';empty.textContent='No se encontraron PDF en tu Smart-Cloud.';list.appendChild(empty);return;}
+        for(const file of files){
+          const btn=document.createElement('button');btn.className='pdf-item';
+          const icon=document.createElement('span');icon.className='pdf-symbol';icon.textContent='PDF';
+          const details=document.createElement('span');details.style.cssText='min-width:0;flex:1';
+          const name=document.createElement('div');name.className='pdf-name';name.textContent=file.name||'Documento.pdf';
+          const meta=document.createElement('div');meta.className='pdf-meta';meta.textContent=formatBytes(file.size_bytes)+' · Smart-Cloud';
+          details.append(name,meta);btn.append(icon,details);
+          btn.addEventListener('click',()=>{
+            setPrompt('Resume el PDF "'+(file.name||'documento.pdf')+'" en mi Smart-Cloud. Incluye las ideas principales y una conclusión.');
+            closeDialog('pdfDialog');$('messageInput').focus();
+          });
+          list.appendChild(btn);
+        }
+      }catch(error){list.replaceChildren();const problem=document.createElement('div');problem.className='dialog-status';problem.textContent=error.message || 'No se pudo consultar Smart-Cloud.';list.appendChild(problem);}
+    }
+
+    function closeMobileSidebar(){ $('sidebar').classList.remove('open');$('mobileOverlay').classList.remove('show'); }
+    function toggleMobileSidebar(){ $('sidebar').classList.toggle('open');$('mobileOverlay').classList.toggle('show'); }
+
+    async function logout(){
+      const base=String(getUrls().account||'').replace(/\/+$/,'');
+      try{ if(token() && base) await fetch(base+'/api/logout',{method:'POST',headers:authHeaders()}); }catch(_){}
+      localStorage.removeItem('smart_token');
+      redirectToAuth();
+    }
+
+    async function initialize(){
+      receiveToken();
+      try{
+        const ok=await checkAccount();if(!ok)return;
+        // Migrar chats antiguos al servidor y borrar las claves locales solo después de guardar.
+        await migrateLegacyIfNeeded();
+        await Promise.all([loadRemoteMemory(),loadRemoteChats()]);
+        $('connectionPill').classList.add('online');$('connectionLabel').textContent='API conectada';
+      }catch(error){
+        $('connectionLabel').textContent='Sin conexión';
+        showToast(error.message || 'No se pudo iniciar Smart AI.');
+        $('chatList').replaceChildren();
+        const msg=document.createElement('div');msg.className='empty-list';msg.textContent=error.message || 'Error al cargar Smart AI API.';$('chatList').appendChild(msg);
+      }
+    }
+
+    $('newChatBtn').addEventListener('click',createChat);
+    $('sendBtn').addEventListener('click',sendMessage);
+    $('messageInput').addEventListener('input',resizeInput);
+    $('messageInput').addEventListener('keydown',event=>{if(event.key==='Enter'&&!event.shiftKey){event.preventDefault();sendMessage();}});
+    $('chatSearch').addEventListener('input',renderChatList);
+    $('attachBtn').addEventListener('click',()=>$('fileInput').click());
+    $('fileInput').addEventListener('change',async event=>{await handleFile(event.target.files?.[0]);event.target.value='';});
+    $('removeAttachment').addEventListener('click',()=>{state.attachment=null;renderAttachment();});
+    $('memoryBtn').addEventListener('click',openMemory);
+    $('headerMemoryBtn').addEventListener('click',openMemory);
+    $('saveMemoryBtn').addEventListener('click',saveMemory);
+    $('smartChatBtn').addEventListener('click',openChatHelper);
+    $('composerChatBtn').addEventListener('click',openChatHelper);
+    $('smartCloudBtn').addEventListener('click',openPdfPicker);
+    $('composerCloudBtn').addEventListener('click',openPdfPicker);
+    $('welcomePdfBtn').addEventListener('click',openPdfPicker);
+    $('logoutBtn').addEventListener('click',logout);
+    $('mobileMenuBtn').addEventListener('click',toggleMobileSidebar);
+    $('mobileOverlay').addEventListener('click',closeMobileSidebar);
+    document.querySelectorAll('[data-close]').forEach(btn=>btn.addEventListener('click',()=>closeDialog(btn.dataset.close)));
+    document.querySelectorAll('.suggestion[data-prompt]').forEach(btn=>btn.addEventListener('click',()=>setPrompt(btn.dataset.prompt)));
+    document.querySelectorAll('dialog').forEach(dialog=>dialog.addEventListener('click',event=>{if(event.target===dialog)closeDialog(dialog.id);}));
+
+    initialize();
+  })();
+  </script>
+</body>
+</html>

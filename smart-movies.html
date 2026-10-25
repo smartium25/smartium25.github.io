@@ -73,7 +73,7 @@
    <div class="trailer-wrap"><h2>Tráiler oficial</h2><video id="trailerVideo" class="trailer" controls playsinline preload="metadata" poster="proximamente.jpg"><source src="trailer.mp4" type="video/mp4">Tu navegador no puede reproducir este vídeo.</video></div>
   </section>
  </main>
- <footer class="footer">Smart-Movies · Parte del ecosistema Smart</footer>
+ <footer class="footer">Smart-Movies</footer>
 </div>
 <div class="modal" id="detailModal"><div class="detail" role="dialog" aria-modal="true" aria-labelledby="detailTitle"><button class="close" id="closeDetail" aria-label="Cerrar detalles" type="button">×</button><div class="detail-backdrop"><video id="detailVideo" muted loop playsinline preload="metadata"></video></div><div class="detail-body"><h2 class="detail-title" id="detailTitle"></h2><div class="tags"><span class="tag" id="detailType"></span><span class="tag" id="detailDuration"></span></div><p class="detail-description" id="detailDescription"></p><div class="actions"><button class="btn btn-primary" id="watchButton" type="button">▶ Ver</button><button class="btn btn-ghost" id="backButton" type="button">Volver</button></div><div class="episodes" id="episodes"><h3>Episodios</h3><div class="ep-list" id="epList"></div></div></div></div></div>
 <div class="modal" id="playerModal"><div class="player"><button class="close" id="closePlayer" aria-label="Cerrar reproductor" type="button">×</button><video id="playerVideo" controls playsinline preload="metadata"></video><h2 class="player-title" id="playerTitle"></h2></div></div>
@@ -124,6 +124,5 @@ $("trailerButton").addEventListener("click",()=>{switchPage("upcomingPage");cons
 async function start(){if(!window.URLS||!URLS.movies||!URLS.account||!URLS.auth){failScreen("No se encontraron URLS.movies, URLS.account o URLS.auth. Comprueba url.js.");return;}const token=tokenValue();if(!token){goAuth();return;}try{const authorized=await checkAccount(token);if(!authorized){for(const key of new Set(TOKEN_KEYS)){try{localStorage.removeItem(key);}catch(e){}}goAuth();return;}catalog=await loadCatalog(token);renderHomeBanners();renderCatalog();loading.style.display="none";app.style.display="block";}catch(error){if(error.auth){for(const key of new Set(TOKEN_KEYS)){try{localStorage.removeItem(key);}catch(e){}}goAuth();return;}console.error(error);failScreen(error.message||"No se pudo iniciar Smart-Movies. Revisa las URLs y la conexión con la API.");}}
 start();
 </script>
-<script src="./smart-lock.js"></script>
 </body>
 </html>

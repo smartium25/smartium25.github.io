@@ -3,1202 +3,356 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width,initial-scale=1.0">
+<meta name="theme-color" content="#0d1117">
 <title>Smart-Sound</title>
-
 <script src="./url.js"></script>
-
 <script>
 // ==========================================================
-// CONFIGURACIÓN  (aquí cambias las URLs, los banners y los límites)
+// CONFIGURACIÓN
 // ==========================================================
-
-// Las URLs se cambian en url.js (misma carpeta que este HTML)
-
-// Dirección de esta API (Smart-Sound, el api.py de música, puerto 8005)
 const API = URLS.sound;
-
-// Dirección de la API de Smart-Account (sirve las fotos de perfil: /pfp/...)
 const KN_AUTH_API = URLS.account;
-
-// Página de inicio de sesión
 const AUTH_URL = URLS.auth;
-
-// Nombre con el que la página de login guarda el token en el navegador
 const TOKEN_KEY = "smart_token";
-
-// Canciones que se cargan cada vez (máximo 100 en el api.py)
 const PAGE_SIZE = 50;
-
-// Espera (ms) después de escribir en el buscador antes de buscar
 const SEARCH_DELAY_MS = 300;
-
-// Formatos de audio y límites (si la API responde, usa sus propios límites)
 const AUDIO_EXTENSIONS = [".mp3", ".wav", ".ogg", ".opus", ".flac", ".m4a", ".aac", ".webm"];
 const DEFAULT_MAX_TRACK_BYTES = 200 * 1024 * 1024;
 const COVER_EXTENSIONS = [".jpg", ".jpeg", ".png", ".webp"];
 const MAX_COVER_BYTES = 5 * 1024 * 1024;
-
-// Volumen guardado en el navegador
 const VOLUME_KEY = "smartsound_volume";
-
-// Banners (están en la misma carpeta que este HTML)
-const BANNERS = [
-  { name: "Banner 1", file: "banner1.png" },
-  { name: "Banner 2", file: "banner2.png" },
-  { name: "Banner 3", file: "banner3.png" }
-];
-
-// Oscurecimiento sobre el banner para que el texto se lea (0 = nada, 1 = negro)
-const BANNER_DIM = 0.35;
-
-// Foto personalizada: lado máximo en píxeles y calidad JPEG (0 a 1)
-const CUSTOM_BANNER_MAX_SIDE = 1600;
-const CUSTOM_BANNER_QUALITY = 0.82;
-
-// Prefijo con el que se guarda el banner elegido (uno por usuario)
-const BANNER_STORAGE_PREFIX = "smartsound_banner_";
 </script>
-
 <style>
-:root{
-  --bg:#252a33;
-  --panel:#272d37;
-  --card:#303640;
-  --cyan:#00f0ff;
-  --cyan2:#00c8d7;
-  --text:#f5f7fa;
-  --muted:#9aa4b2;
-  --green:#35d06f;
-  --red:#ff5b67;
-  --border:#3b424d;
-}
-
-*{
-  box-sizing:border-box;
-  margin:0;
-  padding:0;
-}
-
-html,
-body{
-  width:100%;
-  height:100%;
-  overflow:hidden;
-}
-
-body{
-  font-family:Segoe UI,Arial,sans-serif;
-  background:var(--bg);
-  color:var(--text);
-}
-
-button,
-input,
-select,
-textarea{
-  font:inherit;
-}
-
-button{
-  border:0;
-  cursor:pointer;
-}
-
-button:disabled{
-  opacity:.55;
-  cursor:not-allowed;
-}
-
-/* =========================================================
-   APP
-========================================================= */
-
-.app{
-  width:100%;
-  height:100vh;
-  display:grid;
-  grid-template-columns:minmax(240px,300px) 1fr;
-  grid-template-rows:minmax(0,1fr) auto;
-  gap:1px;
-  background:var(--border);
-}
-
-.panel{
-  background:var(--panel);
-  padding:16px;
-  min-width:0;
-  display:flex;
-  flex-direction:column;
-  overflow:auto;
-}
-
-.title{
-  color:var(--cyan);
-  background:var(--card);
-  border-radius:12px;
-  padding:12px 14px;
-  text-align:center;
-  font-weight:700;
-  margin-bottom:12px;
-}
-
-.scroll{
-  flex:1;
-  min-height:0;
-  overflow:auto;
-  padding-right:2px;
-}
-
-.scroll::-webkit-scrollbar,
-.panel::-webkit-scrollbar,
-.modal-card::-webkit-scrollbar{
-  width:7px;
-}
-
-.scroll::-webkit-scrollbar-thumb,
-.panel::-webkit-scrollbar-thumb,
-.modal-card::-webkit-scrollbar-thumb{
-  background:#46505c;
-  border-radius:9px;
-}
-
-/* =========================================================
-   SIDEBAR
-========================================================= */
-
-.me-box{
-  display:flex;
-  align-items:center;
-  gap:12px;
-  background:var(--card);
-  border-radius:12px;
-  padding:12px;
-  margin-bottom:12px;
-}
-
-.me-box img{
-  width:52px;
-  height:52px;
-  border-radius:50%;
-  object-fit:cover;
-  border:2px solid var(--cyan);
-  background:#171b21;
-  flex:none;
-}
-
-.me-name{
-  min-width:0;
-  font-weight:700;
-  overflow:hidden;
-  text-overflow:ellipsis;
-  white-space:nowrap;
-}
-
-.storage{
-  background:var(--card);
-  border-radius:12px;
-  padding:12px;
-  margin-bottom:12px;
-}
-
-.storage-label{
-  color:var(--muted);
-  font-size:12px;
-  margin-bottom:8px;
-}
-
-.bar{
-  height:8px;
-  border-radius:99px;
-  background:#1e232b;
-  overflow:hidden;
-}
-
-.bar i{
-  display:block;
-  height:100%;
-  width:0;
-  border-radius:99px;
-  background:linear-gradient(90deg,var(--cyan2),var(--cyan));
-  transition:width .3s;
-}
-
-.bar i.full{
-  background:linear-gradient(90deg,#ff8a5b,var(--red));
-}
-
-.storage-text{
-  margin-top:8px;
-  font-size:13px;
-  font-weight:600;
-}
-
-.storage-sub{
-  margin-top:3px;
-  font-size:12px;
-  color:var(--muted);
-}
-
-.primary-btn{
-  background:var(--cyan);
-  color:#081013;
-  font-weight:700;
-  border-radius:9px;
-  padding:11px 12px;
-}
-
-.primary-btn:hover:not(:disabled){
-  background:#5ff6ff;
-}
-
-.side-btn,
-.secondary-btn{
-  background:#454c57;
-  color:#fff;
-  font-weight:700;
-  border-radius:9px;
-  padding:11px 12px;
-}
-
-.side-btn:hover,
-.secondary-btn:hover{
-  background:#515a66;
-}
-
-.danger-btn{
-  background:var(--red);
-  color:#fff;
-  font-weight:700;
-  border-radius:9px;
-  padding:11px 12px;
-}
-
-.danger-btn:hover{
-  filter:brightness(1.08);
-}
-
-.full{
-  width:100%;
-  margin-bottom:9px;
-}
-
-.spacer{
-  flex:1;
-}
-
-/* =========================================================
-   CENTER
-========================================================= */
-
-.center{
-  background:#21262e;
-  background-size:cover;
-  background-position:center;
-  background-repeat:no-repeat;
-  min-width:0;
-  min-height:0;
-  display:flex;
-  flex-direction:column;
-  overflow:hidden;
-}
-
-.toolbar{
-  flex:none;
-  display:flex;
-  align-items:center;
-  gap:9px;
-  flex-wrap:wrap;
-  padding:12px 14px;
-  background:var(--card);
-}
-
-.search{
-  flex:1;
-  min-width:160px;
-  background:#1e232b;
-  color:var(--text);
-  border:1px solid #434b56;
-  border-radius:9px;
-  padding:10px 12px;
-  outline:none;
-}
-
-.search:focus,
-select:focus,
-.field input:focus,
-.field textarea:focus{
-  border-color:var(--cyan);
-}
-
-select{
-  background:#1e232b;
-  color:var(--text);
-  border:1px solid #434b56;
-  border-radius:9px;
-  padding:10px 10px;
-  outline:none;
-}
-
-.order-btn{
-  background:#454c57;
-  color:#fff;
-  border-radius:9px;
-  width:40px;
-  height:40px;
-  flex:none;
-}
-
-.order-btn:hover{
-  background:#515a66;
-}
-
-.count{
-  color:var(--muted);
-  font-size:12px;
-  flex:none;
-}
-
-.list{
-  padding:14px;
-}
-
-.row{
-  display:flex;
-  align-items:center;
-  gap:12px;
-  background:var(--card);
-  border-radius:12px;
-  padding:9px 12px;
-  margin-bottom:8px;
-  cursor:pointer;
-  border:1px solid transparent;
-}
-
-.row:hover{
-  background:#353c47;
-}
-
-.row.playing{
-  border-color:rgba(0,240,255,.45);
-  background:#2c3a43;
-}
-
-.row-icon{
-  width:42px;
-  height:42px;
-  border-radius:10px;
-  display:grid;
-  place-items:center;
-  font-size:20px;
-  background:#1e232b;
-  flex:none;
-  color:var(--cyan);
-}
-
-.eq{
-  display:flex;
-  align-items:flex-end;
-  gap:3px;
-  height:18px;
-}
-
-.eq i{
-  width:4px;
-  background:var(--cyan);
-  border-radius:2px;
-  height:30%;
-  animation:eq 0.9s ease-in-out infinite;
-}
-
-.eq i:nth-child(2){
-  animation-delay:.2s;
-}
-
-.eq i:nth-child(3){
-  animation-delay:.4s;
-}
-
-.eq.paused i{
-  animation-play-state:paused;
-}
-
-@keyframes eq{
-  0%,100%{height:25%;}
-  50%{height:100%;}
-}
-
-.row-main{
-  min-width:0;
-  flex:1;
-}
-
-.row-title{
-  font-weight:600;
-  overflow:hidden;
-  text-overflow:ellipsis;
-  white-space:nowrap;
-}
-
-.row-sub{
-  margin-top:3px;
-  font-size:12px;
-  color:var(--muted);
-  overflow:hidden;
-  text-overflow:ellipsis;
-  white-space:nowrap;
-}
-
-.row-extra{
-  flex:none;
-  width:140px;
-  font-size:12px;
-  color:var(--muted);
-  overflow:hidden;
-  text-overflow:ellipsis;
-  white-space:nowrap;
-}
-
-.row-size{
-  flex:none;
-  width:70px;
-  text-align:right;
-  font-size:12px;
-  color:var(--muted);
-}
-
-.row-actions{
-  display:flex;
-  gap:6px;
-  flex:none;
-}
-
-.icon-btn{
-  width:34px;
-  height:34px;
-  border-radius:9px;
-  background:#454c57;
-  color:#fff;
-  font-size:15px;
-}
-
-.icon-btn:hover{
-  background:#515a66;
-}
-
-.icon-btn.del:hover{
-  background:var(--red);
-}
-
-.empty{
-  color:var(--muted);
-  font-size:13px;
-  padding:34px 8px;
-  text-align:center;
-  line-height:1.6;
-}
-
-.more-btn{
-  display:block;
-  margin:6px auto 0;
-  background:#454c57;
-  color:#fff;
-  font-weight:700;
-  border-radius:9px;
-  padding:10px 22px;
-}
-
-.more-btn:hover{
-  background:#515a66;
-}
-
-/* =========================================================
-   REPRODUCTOR
-========================================================= */
-
-.player{
-  grid-column:1 / -1;
-  background:var(--panel);
-  display:grid;
-  grid-template-columns:minmax(180px,1fr) minmax(280px,2fr) minmax(120px,1fr);
-  align-items:center;
-  gap:16px;
-  padding:10px 16px;
-}
-
-.now{
-  display:flex;
-  align-items:center;
-  gap:12px;
-  min-width:0;
-}
-
-.cover{
-  width:56px;
-  height:56px;
-  border-radius:10px;
-  background:#1e232b;
-  display:grid;
-  place-items:center;
-  font-size:24px;
-  color:var(--cyan);
-  overflow:hidden;
-  flex:none;
-}
-
-.cover img{
-  width:100%;
-  height:100%;
-  object-fit:cover;
-  display:block;
-}
-
-.now-text{
-  min-width:0;
-}
-
-.now-title{
-  font-weight:700;
-  overflow:hidden;
-  text-overflow:ellipsis;
-  white-space:nowrap;
-}
-
-.now-sub{
-  margin-top:3px;
-  font-size:12px;
-  color:var(--muted);
-  overflow:hidden;
-  text-overflow:ellipsis;
-  white-space:nowrap;
-}
-
-.transport{
-  display:flex;
-  flex-direction:column;
-  gap:6px;
-  min-width:0;
-}
-
-.controls{
-  display:flex;
-  justify-content:center;
-  align-items:center;
-  gap:10px;
-}
-
-.ctl{
-  width:36px;
-  height:36px;
-  border-radius:50%;
-  background:transparent;
-  color:#fff;
-  font-size:16px;
-}
-
-.ctl:hover:not(:disabled){
-  background:#454c57;
-}
-
-.ctl.on{
-  color:var(--cyan);
-}
-
-.ctl.play{
-  width:44px;
-  height:44px;
-  background:var(--cyan);
-  color:#081013;
-  font-size:18px;
-}
-
-.ctl.play:hover:not(:disabled){
-  background:#5ff6ff;
-}
-
-.seek{
-  display:flex;
-  align-items:center;
-  gap:9px;
-  font-size:11px;
-  color:var(--muted);
-}
-
-.seek span{
-  width:38px;
-  text-align:center;
-  flex:none;
-}
-
-input[type=range]{
-  flex:1;
-  min-width:0;
-  accent-color:var(--cyan);
-  cursor:pointer;
-}
-
-.volume{
-  display:flex;
-  align-items:center;
-  gap:8px;
-  justify-content:flex-end;
-}
-
-.volume input{
-  max-width:120px;
-}
-
-/* =========================================================
-   MODALES
-========================================================= */
-
-.modal{
-  position:fixed;
-  inset:0;
-  background:rgba(10,12,16,.72);
-  display:none;
-  align-items:center;
-  justify-content:center;
-  padding:16px;
-  z-index:30;
-}
-
-.modal.show{
-  display:flex;
-}
-
-.modal-card{
-  width:100%;
-  max-width:560px;
-  max-height:92vh;
-  overflow:auto;
-  background:var(--panel);
-  border:1px solid var(--border);
-  border-radius:14px;
-  padding:16px;
-}
-
-.modal-card.small{
-  max-width:420px;
-}
-
-.dlg-text{
-  color:var(--muted);
-  font-size:14px;
-  line-height:1.5;
-  margin-bottom:12px;
-}
-
-.dlg-text:empty{
-  display:none;
-}
-
-.field{
-  margin-bottom:10px;
-}
-
-.field label{
-  display:block;
-  font-size:12px;
-  color:var(--muted);
-  margin-bottom:5px;
-}
-
-.field input[type=text],
-.field textarea{
-  width:100%;
-  background:#1e232b;
-  color:var(--text);
-  border:1px solid #434b56;
-  border-radius:9px;
-  padding:10px 12px;
-  outline:none;
-}
-
-.field textarea{
-  resize:vertical;
-  min-height:70px;
-}
-
-.field input[type=file]{
-  width:100%;
-  font-size:13px;
-  color:var(--muted);
-}
-
-.two{
-  display:grid;
-  grid-template-columns:1fr 1fr;
-  gap:10px;
-}
-
-.cover-row{
-  display:flex;
-  align-items:center;
-  gap:12px;
-}
-
-.cover-preview{
-  width:64px;
-  height:64px;
-  border-radius:10px;
-  background:#1e232b;
-  display:grid;
-  place-items:center;
-  font-size:24px;
-  color:var(--muted);
-  overflow:hidden;
-  flex:none;
-}
-
-.cover-preview img{
-  width:100%;
-  height:100%;
-  object-fit:cover;
-}
-
-.status-box{
-  display:none;
-  margin-bottom:10px;
-  padding:10px 12px;
-  border-radius:10px;
-  font-size:13px;
-}
-
-.status-box.show{
-  display:block;
-}
-
-.status-box.err{
-  background:#3b2428;
-  color:#ffafb5;
-  border:1px solid #70434a;
-}
-
-.status-box.info{
-  background:#1e2a33;
-  color:#bffaff;
-  border:1px solid #2f4350;
-}
-
-.progress{
-  display:none;
-  margin-bottom:10px;
-}
-
-.progress.show{
-  display:block;
-}
-
-.progress .bar{
-  height:8px;
-}
-
-.progress-text{
-  margin-top:6px;
-  font-size:12px;
-  color:var(--muted);
-}
-
-.modal-actions{
-  display:flex;
-  gap:9px;
-  flex-wrap:wrap;
-  margin-top:6px;
-}
-
-.modal-actions button{
-  flex:1;
-  min-width:110px;
-}
-
-/* ---------- Banners ---------- */
-
-.banner-grid{
-  display:grid;
-  grid-template-columns:repeat(auto-fill,minmax(150px,1fr));
-  gap:10px;
-  margin-bottom:14px;
-}
-
-.banner-opt{
-  background:var(--card);
-  border:2px solid transparent;
-  border-radius:12px;
-  padding:6px;
-  color:var(--text);
-  text-align:center;
-  font-size:12px;
-  font-weight:600;
-}
-
-.banner-opt:hover{
-  background:#353c47;
-}
-
-.banner-opt.active{
-  border-color:var(--cyan);
-}
-
-.banner-opt img,
-.banner-opt .banner-none{
-  display:block;
-  width:100%;
-  height:80px;
-  object-fit:cover;
-  border-radius:8px;
-  margin-bottom:6px;
-  background:#21262e;
-}
-
-.banner-opt .banner-none{
-  display:flex;
-  align-items:center;
-  justify-content:center;
-  color:var(--muted);
-  font-size:11px;
-}
-
-.toast{
-  position:fixed;
-  left:50%;
-  bottom:96px;
-  transform:translateX(-50%);
-  background:#1d2128;
-  border:1px solid #414954;
-  color:#fff;
-  padding:9px 13px;
-  border-radius:9px;
-  font-size:12px;
-  display:none;
-  z-index:40;
-  max-width:90vw;
-}
-
-.toast.show{
-  display:block;
-}
-
-/* =========================================================
-   RESPONSIVE
-========================================================= */
-
-@media(max-width:900px){
-
-  .row-extra{
-    display:none;
-  }
-
-  .player{
-    grid-template-columns:minmax(150px,1fr) minmax(220px,2fr);
-  }
-
-  .volume{
-    display:none;
-  }
-}
-
-@media(max-width:800px){
-
-  .app{
-    grid-template-columns:1fr;
-    grid-template-rows:auto minmax(0,1fr) auto;
-  }
-
-  .panel{
-    padding:12px;
-    max-height:44vh;
-  }
-
-  .panel .title,
-  .spacer{
-    display:none;
-  }
-
-  .side-grid{
-    display:grid;
-    grid-template-columns:1fr 1fr;
-    gap:8px;
-  }
-
-  .side-grid .full{
-    margin-bottom:0;
-  }
-
-  .me-box,
-  .storage{
-    margin-bottom:8px;
-  }
-}
-
-@media(max-width:600px){
-
-  .row-size{
-    display:none;
-  }
-
-  .player{
-    grid-template-columns:1fr;
-    gap:8px;
-    padding:8px 12px;
-  }
-
-  .cover{
-    width:44px;
-    height:44px;
-  }
-
-  .row-actions .icon-btn.sec{
-    display:none;
-  }
-
-  .two{
-    grid-template-columns:1fr;
-  }
+:root {
+  color-scheme: dark;
+  --bg: #0d1117;
+  --sidebar: #121820;
+  --surface: #171f29;
+  --surface-2: #1d2733;
+  --surface-hover: #222f3c;
+  --border: #2b3947;
+  --text: #f0f5f9;
+  --muted: #93a2b2;
+  --faint: #657586;
+  --accent: #34dce8;
+  --accent-strong: #13bdca;
+  --danger: #ff6675;
+  --radius: 12px;
+}
+* { box-sizing: border-box; margin: 0; padding: 0; }
+html, body { width: 100%; height: 100%; overflow: hidden; }
+body { background: var(--bg); color: var(--text); font-family: Inter, ui-sans-serif, system-ui, -apple-system, "Segoe UI", sans-serif; }
+button, input, select, textarea { font: inherit; }
+button { border: 0; cursor: pointer; }
+button:focus-visible, input:focus-visible, select:focus-visible, textarea:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
+button:disabled { opacity: .55; cursor: not-allowed; }
+.app { display: grid; grid-template-columns: 238px minmax(0,1fr); grid-template-rows: minmax(0,1fr) 94px; width: 100%; height: 100vh; height: 100dvh; min-height: 0; background: var(--bg); }
+/* Sidebar */
+.panel { grid-column: 1; grid-row: 1; min-width: 0; min-height: 0; display: flex; flex-direction: column; padding: 24px 14px 15px; background: linear-gradient(180deg,#141c26 0%,#111720 100%); border-right: 1px solid var(--border); overflow: auto; }
+.brand { display: flex; align-items: center; gap: 11px; padding: 0 9px 24px; }
+.brand-icon { display: grid; place-items: center; flex: none; width: 42px; height: 42px; border-radius: 13px; color: #071419; font-size: 26px; font-weight: 900; background: linear-gradient(145deg,#7af3f7,#20bdcb); box-shadow: 0 7px 22px #19c1ce22; }
+.brand-name { font-size: 16px; font-weight: 800; letter-spacing: -.035em; }
+.brand-caption { margin-top: 3px; color: var(--muted); font-size: 9px; font-weight: 700; letter-spacing: .16em; }
+.sidebar-label { padding: 11px 10px 8px; color: var(--faint); font-size: 10px; font-weight: 800; letter-spacing: .15em; }
+.side-nav { display: grid; gap: 5px; }
+.nav-item { display: flex; align-items: center; gap: 11px; min-height: 42px; width: 100%; padding: 0 11px; border-radius: 9px; color: #aab8c6; background: transparent; text-align: left; font-size: 13px; font-weight: 600; }
+.nav-item .nav-icon { width: 20px; text-align: center; font-size: 17px; }
+.nav-item.active { color: var(--accent); background: #34dce815; }
+.nav-item:hover:not(.active) { color: var(--text); background: #ffffff08; }
+.sidebar-spacer { flex: 1; min-height: 22px; }
+.me-box { display: flex; align-items: center; gap: 10px; padding: 12px 9px; border-top: 1px solid var(--border); border-bottom: 1px solid var(--border); margin: 16px 0 12px; min-width: 0; }
+.me-box img { width: 38px; height: 38px; border: 1px solid #42515f; border-radius: 50%; object-fit: cover; background: var(--surface-2); flex: none; }
+.me-copy { min-width: 0; flex: 1; }
+.me-label { color: var(--faint); font-size: 10px; margin-bottom: 3px; }
+.me-name { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; font-size: 13px; font-weight: 700; }
+.primary-btn, .side-btn, .secondary-btn, .danger-btn { display: inline-flex; align-items: center; justify-content: center; gap: 8px; min-height: 39px; border-radius: 9px; padding: 10px 13px; font-weight: 750; font-size: 12px; transition: background .15s ease, transform .15s ease; }
+.primary-btn { color: #071419; background: var(--accent); }
+.primary-btn:hover:not(:disabled) { background: #69edf3; transform: translateY(-1px); }
+.side-btn, .secondary-btn { color: var(--text); background: #26313d; border: 1px solid #344250; }
+.side-btn:hover, .secondary-btn:hover { background: #303d4a; }
+.danger-btn { color: white; background: #a93343; }
+.danger-btn:hover { background: #c34252; }
+.full { width: 100%; }
+.logout-btn { justify-content: flex-start; margin-top: 5px; background: transparent; border-color: transparent; color: var(--muted); }
+.logout-btn:hover { color: var(--text); background: #ffffff08; }
+/* Main */
+.center { grid-column: 2; grid-row: 1; min-width: 0; min-height: 0; display: flex; flex-direction: column; overflow: hidden; background: radial-gradient(ellipse at 72% -20%,#1b3440 0,transparent 38%), var(--bg); }
+.content-top { display: flex; align-items: flex-start; justify-content: space-between; gap: 20px; padding: 30px 34px 19px; flex: none; }
+.eyebrow { margin-bottom: 8px; color: var(--accent); font-size: 10px; font-weight: 800; letter-spacing: .18em; }
+.content-heading h1 { color: var(--text); font-size: clamp(27px,3vw,37px); line-height: 1.08; letter-spacing: -.055em; font-weight: 800; }
+.content-heading p { margin-top: 8px; color: var(--muted); font-size: 13px; line-height: 1.5; }
+.heading-mark { color: #34dce833; font-size: 60px; line-height: 1; padding-right: 8px; user-select: none; }
+.toolbar { display: flex; align-items: center; gap: 10px; padding: 0 34px 17px; flex: none; }
+.search-wrap { position: relative; flex: 1; min-width: 100px; }
+.search-icon { position: absolute; left: 13px; top: 50%; transform: translateY(-50%); color: var(--faint); pointer-events: none; }
+.search { width: 100%; height: 42px; padding: 0 14px 0 38px; border: 1px solid #2c3a47; border-radius: 10px; background: #121a23; color: var(--text); outline: none; font-size: 12px; }
+.search:focus, select:focus { border-color: #34dce88a; }
+select { height: 42px; max-width: 175px; padding: 0 12px; border: 1px solid #2c3a47; border-radius: 10px; background: #121a23; color: #d9e4eb; outline: none; font-size: 12px; }
+.order-btn { width: 42px; height: 42px; flex: none; border: 1px solid #2c3a47; border-radius: 10px; background: #121a23; color: var(--muted); }
+.order-btn:hover { color: var(--accent); border-color: #34dce866; }
+.count { flex: none; color: var(--muted); font-size: 11px; white-space: nowrap; }
+.list-area { min-height: 0; flex: 1; display: flex; flex-direction: column; padding: 0 25px 18px; overflow: hidden; }
+.table-head { display: grid; grid-template-columns: 38px minmax(170px,1.7fr) minmax(110px,1fr) minmax(85px,.75fr) 78px 116px; align-items: center; gap: 12px; padding: 0 13px 10px; border-bottom: 1px solid var(--border); color: var(--faint); font-size: 9px; font-weight: 800; letter-spacing: .13em; flex: none; }
+.list { min-height: 0; flex: 1; overflow: auto; padding: 8px 0 14px; scrollbar-width: thin; scrollbar-color: #344553 transparent; }
+.list::-webkit-scrollbar, .panel::-webkit-scrollbar, .modal-card::-webkit-scrollbar { width: 7px; }
+.list::-webkit-scrollbar-thumb, .panel::-webkit-scrollbar-thumb, .modal-card::-webkit-scrollbar-thumb { background: #344553; border-radius: 20px; }
+.row { display: grid; grid-template-columns: 38px minmax(170px,1.7fr) minmax(110px,1fr) minmax(85px,.75fr) 78px 116px; align-items: center; gap: 12px; min-height: 66px; padding: 8px 13px; margin-bottom: 4px; border: 1px solid transparent; border-radius: 10px; cursor: pointer; transition: background .14s ease, border-color .14s ease; }
+.row:hover { background: #ffffff06; }
+.row.playing { background: #34dce80c; border-color: #34dce82e; }
+.track-index { display: grid; place-items: center; color: #738395; font-size: 11px; font-variant-numeric: tabular-nums; }
+.row.playing .track-index { color: var(--accent); }
+.track-main { display: flex; align-items: center; min-width: 0; gap: 11px; }
+.track-art { display: grid; place-items: center; width: 42px; height: 42px; flex: none; border-radius: 8px; color: #83eaf0; background: linear-gradient(145deg,#243d4a,#17242f); font-size: 19px; }
+.track-main-copy { min-width: 0; }
+.row-title { overflow: hidden; color: #eaf1f6; font-size: 12px; font-weight: 700; text-overflow: ellipsis; white-space: nowrap; }
+.row-sub { overflow: hidden; margin-top: 4px; color: var(--muted); font-size: 11px; text-overflow: ellipsis; white-space: nowrap; }
+.row-album, .row-genre { min-width: 0; overflow: hidden; color: #a7b4c1; font-size: 11px; white-space: nowrap; text-overflow: ellipsis; }
+.row-size { text-align: right; color: #7f8e9e; font-size: 10px; font-variant-numeric: tabular-nums; }
+.row-actions { display: flex; align-items: center; justify-content: flex-end; gap: 4px; }
+.icon-btn { display: grid; place-items: center; width: 30px; height: 30px; border-radius: 8px; color: #a5b4c2; background: transparent; font-size: 13px; }
+.icon-btn:hover { color: var(--accent); background: #34dce817; }
+.icon-btn.del:hover { color: #ffb6be; background: #ff66751a; }
+.empty { display: flex; flex-direction: column; align-items: center; justify-content: center; min-height: 230px; padding: 30px 15px; color: var(--muted); text-align: center; line-height: 1.7; font-size: 13px; }
+.empty::before { content: "♫"; display: grid; place-items: center; width: 62px; height: 62px; margin-bottom: 15px; border-radius: 18px; color: var(--accent); background: #34dce812; font-size: 29px; }
+.more-btn { display: block; margin: 12px auto 0; padding: 10px 18px; border: 1px solid #344553; border-radius: 9px; color: var(--text); background: var(--surface); font-size: 12px; font-weight: 700; }
+.more-btn:hover { border-color: #34dce866; color: var(--accent); }
+/* Player dock */
+.player { grid-column: 1 / -1; grid-row: 2; display: grid; grid-template-columns: minmax(170px,1fr) minmax(250px,1.2fr) minmax(130px,1fr); align-items: center; gap: 20px; min-width: 0; padding: 12px 24px; border-top: 1px solid #2b3947; background: #10161e; box-shadow: 0 -8px 28px #00000016; }
+.now { display: flex; align-items: center; min-width: 0; gap: 11px; }
+.cover { display: grid; place-items: center; flex: none; width: 54px; height: 54px; overflow: hidden; border: 1px solid #354553; border-radius: 10px; color: var(--accent); background: linear-gradient(145deg,#233845,#17212b); font-size: 23px; }
+.cover img { width: 100%; height: 100%; object-fit: cover; display: block; }
+.now-text { min-width: 0; }
+.now-title { overflow: hidden; color: #edf4f8; font-size: 12px; font-weight: 750; text-overflow: ellipsis; white-space: nowrap; }
+.now-sub { overflow: hidden; margin-top: 5px; color: var(--muted); font-size: 11px; text-overflow: ellipsis; white-space: nowrap; }
+.transport { display: flex; flex-direction: column; gap: 6px; min-width: 0; }
+.controls { display: flex; align-items: center; justify-content: center; gap: 10px; }
+.ctl { display: grid; place-items: center; width: 32px; height: 32px; border-radius: 50%; color: #a5b4c2; background: transparent; font-size: 14px; }
+.ctl:hover:not(:disabled) { color: var(--text); background: #26323e; }
+.ctl.on { color: var(--accent); }
+.ctl.play { width: 39px; height: 39px; color: #071419; background: var(--accent); font-size: 17px; }
+.ctl.play:hover { background: #72edf3; }
+.seek { display: flex; align-items: center; gap: 9px; color: var(--faint); font-size: 10px; font-variant-numeric: tabular-nums; }
+.seek span { width: 34px; flex: none; text-align: center; }
+input[type=range] { min-width: 0; flex: 1; accent-color: var(--accent); cursor: pointer; }
+.volume { display: flex; align-items: center; justify-content: flex-end; gap: 9px; color: #7f8e9e; font-size: 14px; }
+.volume input { max-width: 112px; }
+/* Modals */
+.modal { position: fixed; inset: 0; z-index: 30; display: none; align-items: center; justify-content: center; padding: 16px; background: #05080dc9; backdrop-filter: blur(7px); }
+.modal.show { display: flex; }
+.modal-card { width: 100%; max-width: 560px; max-height: 92vh; overflow: auto; padding: 23px; border: 1px solid #33414f; border-radius: 17px; background: #151e28; box-shadow: 0 24px 90px #0008; }
+.modal-card.small { max-width: 410px; }
+.modal .title { margin-bottom: 17px; color: var(--text); font-size: 19px; font-weight: 800; letter-spacing: -.03em; }
+.dlg-text { margin-bottom: 14px; color: var(--muted); font-size: 13px; line-height: 1.6; }
+.dlg-text:empty { display: none; }
+.field { margin-bottom: 13px; }
+.field label { display: block; margin-bottom: 6px; color: #a7b4c1; font-size: 11px; font-weight: 700; }
+.field input[type=text], .field textarea { width: 100%; min-height: 40px; padding: 10px 12px; border: 1px solid #344453; border-radius: 9px; color: var(--text); background: #0f161e; outline: none; font-size: 12px; }
+.field input[type=file] { width: 100%; color: var(--muted); font-size: 12px; }
+.field input[type=text]:focus, .field textarea:focus { border-color: var(--accent); }
+.field textarea { min-height: 74px; resize: vertical; }
+.two { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
+.cover-row { display: flex; align-items: center; gap: 12px; }
+.cover-preview { display: grid; place-items: center; width: 60px; height: 60px; flex: none; overflow: hidden; border-radius: 9px; background: #24313d; color: var(--muted); font-size: 21px; }
+.cover-preview img { width: 100%; height: 100%; object-fit: cover; }
+.status-box { display: none; margin-bottom: 13px; padding: 10px 12px; border-radius: 9px; font-size: 12px; line-height: 1.5; }
+.status-box.show { display: block; }
+.status-box.err { color: #ffb8c0; background: #48232a; border: 1px solid #713944; }
+.status-box.info { color: #baf5f7; background: #19323a; border: 1px solid #28525c; }
+.progress { display: none; margin-bottom: 13px; }
+.progress.show { display: block; }
+.progress .bar { height: 7px; border-radius: 99px; overflow: hidden; background: #273541; }
+.progress .bar i { display: block; width: 0; height: 100%; border-radius: inherit; background: var(--accent); transition: width .15s; }
+.progress-text { margin-top: 7px; color: var(--muted); font-size: 11px; }
+.modal-actions { display: flex; flex-wrap: wrap; gap: 9px; margin-top: 17px; }
+.modal-actions button { flex: 1; min-width: 110px; }
+.toast { position: fixed; left: 50%; bottom: 112px; z-index: 50; max-width: 90vw; padding: 11px 16px; transform: translateX(-50%); border: 1px solid #344553; border-radius: 11px; color: var(--text); background: #18222d; box-shadow: 0 12px 32px #0005; display: none; font-size: 12px; }
+.toast.show { display: block; }
+@media (max-width: 1050px) {
+  .app { grid-template-columns: 205px minmax(0,1fr); }
+  .content-top { padding: 24px 24px 16px; }
+  .toolbar { padding: 0 24px 15px; }
+  .list-area { padding: 0 16px 12px; }
+  .table-head, .row { grid-template-columns: 30px minmax(150px,1.6fr) minmax(85px,1fr) 68px 105px; gap: 9px; }
+  .th-genre, .row-genre { display: none; }
+  .player { gap: 12px; padding: 10px 16px; }
+}
+@media (max-width: 760px) {
+  html, body { overflow: hidden; }
+  .app { grid-template-columns: 1fr; grid-template-rows: 58px minmax(0,1fr) 116px; }
+  .panel { grid-column: 1; grid-row: 1; flex-direction: row; align-items: center; gap: 10px; padding: 7px 12px; border-right: 0; border-bottom: 1px solid var(--border); overflow: hidden; }
+  .brand { gap: 8px; padding: 0; }
+  .brand-icon { width: 36px; height: 36px; border-radius: 10px; font-size: 21px; }
+  .brand-name { font-size: 13px; }
+  .brand-caption, .sidebar-label, .side-nav, .sidebar-spacer { display: none; }
+  .me-box { margin: 0 0 0 auto; padding: 0 9px 0 0; border: 0; }
+  .me-box img { width: 31px; height: 31px; }
+  .me-label { display: none; }
+  .primary-btn { min-height: 35px; padding: 8px 11px; white-space: nowrap; }
+  .panel > .primary-btn { width: auto; }
+  .logout-btn { width: 37px; min-width: 37px; min-height: 35px; padding: 0; justify-content: center; margin: 0; }
+  .logout-label { display: none; }
+  .center { grid-column: 1; grid-row: 2; }
+  .content-top { padding: 17px 18px 12px; }
+  .content-heading h1 { font-size: 26px; }
+  .content-heading p { font-size: 11px; }
+  .heading-mark { font-size: 40px; }
+  .toolbar { padding: 0 14px 12px; gap: 7px; }
+  .search { height: 38px; font-size: 11px; }
+  select { max-width: 112px; height: 38px; font-size: 11px; }
+  .order-btn { width: 38px; height: 38px; }
+  .count { display: none; }
+  .list-area { padding: 0 10px 8px; }
+  .table-head { grid-template-columns: 25px minmax(130px,1fr) 72px; padding: 0 9px 8px; gap: 8px; }
+  .table-head .th-album, .table-head .th-size, .table-head .th-actions { display: none; }
+  .row { grid-template-columns: 25px minmax(130px,1fr) 72px; gap: 8px; padding: 7px 9px; min-height: 58px; }
+  .row-album, .row-size, .row-actions { display: none; }
+  .track-art { width: 36px; height: 36px; }
+  .player { grid-column: 1; grid-row: 3; grid-template-columns: minmax(0,1fr) auto; grid-template-rows: auto auto; gap: 4px 12px; padding: 8px 12px; }
+  .cover { width: 39px; height: 39px; border-radius: 8px; }
+  .now { grid-column: 1; grid-row: 1; gap: 8px; }
+  .now-title { font-size: 11px; }
+  .now-sub { font-size: 10px; }
+  .transport { grid-column: 1 / -1; grid-row: 2; display: grid; grid-template-columns: 1fr; gap: 2px; }
+  .controls { position: absolute; right: 10px; top: 9px; gap: 2px; }
+  .player { position: relative; }
+  .controls .ctl { width: 28px; height: 28px; font-size: 12px; }
+  .controls .ctl.play { width: 33px; height: 33px; font-size: 15px; }
+  .seek { gap: 5px; }
+  .seek span { width: 30px; font-size: 9px; }
+  .volume { display: none; }
+  .toast { bottom: 128px; }
+}
+@media (max-width: 430px) {
+  .brand-copy { display: none; }
+  .me-name { max-width: 82px; }
+  .content-top { padding: 14px 13px 10px; }
+  .heading-mark { display: none; }
+  .toolbar { padding: 0 10px 10px; }
+  select { max-width: 92px; padding: 0 6px; }
+  .table-head, .row { grid-template-columns: 20px minmax(0,1fr) 56px; gap: 6px; }
+  .track-art { width: 32px; height: 32px; }
+  .row-genre, .th-genre { display: none; }
+  .track-index { font-size: 10px; }
+  .modal-card { padding: 16px; }
+  .two { grid-template-columns: 1fr; gap: 0; }
 }
 </style>
 </head>
-
 <body>
-
 <div class="app" id="app" style="display:none;">
-
-  <!-- SIDEBAR -->
-
-  <aside class="panel">
-
-    <div class="title">
-      Smart-Sound
+  <aside class="panel" aria-label="Navegación de Smart-Sound">
+    <div class="brand" aria-label="Smart-Sound">
+      <div class="brand-icon" aria-hidden="true">♫</div>
+      <div class="brand-copy">
+        <div class="brand-name">Smart-Sound</div>
+        <div class="brand-caption">MUSIC PLAYER</div>
+      </div>
     </div>
+
+    <div class="sidebar-label">ESCUCHA</div>
+    <nav class="side-nav" aria-label="Secciones">
+      <button class="nav-item active" type="button" id="navSongs">
+        <span class="nav-icon" aria-hidden="true">♫</span>
+        <span>Canciones</span>
+      </button>
+      <button class="nav-item" type="button" id="navRecent">
+        <span class="nav-icon" aria-hidden="true">◷</span>
+        <span>Añadidas recientemente</span>
+      </button>
+    </nav>
+
+    <div class="sidebar-label">TU CUENTA</div>
+    <button id="uploadBtn" class="primary-btn full" type="button">
+      <span aria-hidden="true">＋</span> Subir canción
+    </button>
+
+    <div class="sidebar-spacer"></div>
 
     <div class="me-box">
-
-      <img
-        id="mypfp"
-        src="https://via.placeholder.com/52"
-        alt="Foto de perfil"
-      >
-
-      <div
-        id="me"
-        class="me-name"
-      ></div>
-
-    </div>
-
-    <div class="storage">
-
-      <div class="storage-label">
-        Espacio usado
+      <img id="mypfp" src="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 50 50'%3E%3Crect width='50' height='50' rx='25' fill='%2326313d'/%3E%3Ccircle cx='25' cy='18' r='9' fill='%237f91a2'/%3E%3Cpath d='M8 47c1-10 7-16 17-16s16 6 17 16' fill='%237f91a2'/%3E%3C/svg%3E" alt="Foto de perfil">
+      <div class="me-copy">
+        <div class="me-label">SESIÓN ACTIVA</div>
+        <div id="me" class="me-name">Cargando...</div>
       </div>
-
-      <div class="bar">
-        <i id="storageBar"></i>
-      </div>
-
-      <div
-        id="storageText"
-        class="storage-text"
-      >
-        ...
-      </div>
-
-      <div
-        id="storageSub"
-        class="storage-sub"
-      ></div>
-
     </div>
-
-    <div class="side-grid">
-
-      <button
-        id="uploadBtn"
-        class="primary-btn full"
-        type="button"
-      >
-        ⬆ Subir canción
-      </button>
-
-      <div class="spacer"></div>
-
-      <button
-        id="bannerOpenBtn"
-        class="side-btn full"
-        type="button"
-      >
-        🎨 BANNER
-      </button>
-
-      <button
-        class="side-btn full"
-        type="button"
-        onclick="logout()"
-      >
-        LOG OUT
-      </button>
-
-    </div>
-
+    <button class="side-btn full logout-btn" type="button" onclick="logout()" title="Cerrar sesión">
+      <span class="nav-icon" aria-hidden="true">↪</span>
+      <span class="logout-label">Cerrar sesión</span>
+    </button>
   </aside>
 
-  <!-- CENTER -->
-
   <main class="center" id="center">
+    <header class="content-top">
+      <div class="content-heading">
+        <div class="eyebrow">TU COLECCIÓN PERSONAL</div>
+        <h1 id="viewTitle">Canciones</h1>
+        <p id="viewDescription">Tu música, organizada en un solo lugar.</p>
+      </div>
+      <div class="heading-mark" aria-hidden="true">♫</div>
+    </header>
 
     <div class="toolbar">
-
-      <input
-        id="search"
-        class="search"
-        type="search"
-        placeholder="Buscar por título, artista, álbum, género..."
-        autocomplete="off"
-      >
-
-      <select id="sort" title="Ordenar por">
+      <label class="search-wrap">
+        <span class="search-icon" aria-hidden="true">⌕</span>
+        <input id="search" class="search" type="search" placeholder="Buscar canción, artista o álbum..." autocomplete="off" aria-label="Buscar canciones">
+      </label>
+      <select id="sort" title="Ordenar por" aria-label="Ordenar canciones">
         <option value="created">Recientes</option>
-        <option value="title">Título</option>
+        <option value="title" selected>Título</option>
         <option value="artist">Artista</option>
         <option value="album">Álbum</option>
         <option value="size">Tamaño</option>
         <option value="updated">Modificadas</option>
       </select>
-
-      <button
-        id="orderBtn"
-        class="order-btn"
-        type="button"
-        title="Cambiar orden"
-      >
-        ▼
-      </button>
-
-      <div id="count" class="count"></div>
-
+      <button id="orderBtn" class="order-btn" type="button" title="Cambiar orden" aria-label="Cambiar orden">▼</button>
+      <div id="count" class="count" aria-live="polite"></div>
     </div>
 
-    <div
-      id="list"
-      class="list scroll"
-    ></div>
-
+    <section class="list-area" aria-label="Lista de canciones">
+      <div class="table-head" aria-hidden="true">
+        <span>#</span>
+        <span>CANCIÓN</span>
+        <span class="th-album">ÁLBUM</span>
+        <span class="th-genre">GÉNERO</span>
+        <span class="th-size" style="text-align:right">TAMAÑO</span>
+        <span class="th-actions" style="text-align:right">ACCIONES</span>
+      </div>
+      <div id="list" class="list scroll" aria-live="polite"></div>
+    </section>
   </main>
 
-  <!-- REPRODUCTOR -->
-
-  <footer class="player">
-
+  <footer class="player" aria-label="Reproductor de música">
     <div class="now">
-
-      <div id="cover" class="cover">🎵</div>
-
+      <div id="cover" class="cover" aria-label="Portada de la canción actual">♫</div>
       <div class="now-text">
-
-        <div
-          id="nowTitle"
-          class="now-title"
-        >
-          Elige una canción
-        </div>
-
-        <div
-          id="nowSub"
-          class="now-sub"
-        ></div>
-
+        <div id="nowTitle" class="now-title">Elige una canción</div>
+        <div id="nowSub" class="now-sub">Smart-Sound</div>
       </div>
-
     </div>
 
     <div class="transport">
-
       <div class="controls">
-
-        <button
-          id="shuffleBtn"
-          class="ctl"
-          type="button"
-          title="Aleatorio"
-        >
-          🔀
-        </button>
-
-        <button
-          id="prevBtn"
-          class="ctl"
-          type="button"
-          title="Anterior"
-        >
-          ⏮
-        </button>
-
-        <button
-          id="playBtn"
-          class="ctl play"
-          type="button"
-          title="Reproducir / pausar"
-        >
-          ▶
-        </button>
-
-        <button
-          id="nextBtn"
-          class="ctl"
-          type="button"
-          title="Siguiente"
-        >
-          ⏭
-        </button>
-
-        <button
-          id="repeatBtn"
-          class="ctl"
-          type="button"
-          title="Repetir"
-        >
-          🔁
-        </button>
-
+        <button id="shuffleBtn" class="ctl" type="button" title="Aleatorio" aria-label="Reproducción aleatoria">⤨</button>
+        <button id="prevBtn" class="ctl" type="button" title="Anterior" aria-label="Canción anterior">◀|</button>
+        <button id="playBtn" class="ctl play" type="button" title="Reproducir / pausar" aria-label="Reproducir o pausar">▶</button>
+        <button id="nextBtn" class="ctl" type="button" title="Siguiente" aria-label="Siguiente canción">|▶</button>
+        <button id="repeatBtn" class="ctl" type="button" title="Repetir" aria-label="Cambiar repetición">↻</button>
       </div>
-
       <div class="seek">
-
         <span id="curTime">0:00</span>
-
-        <input
-          id="seekBar"
-          type="range"
-          min="0"
-          max="1000"
-          value="0"
-        >
-
+        <input id="seekBar" type="range" min="0" max="1000" value="0" aria-label="Posición de reproducción">
         <span id="durTime">0:00</span>
-
       </div>
-
     </div>
 
     <div class="volume">
-
-      <span>🔊</span>
-
-      <input
-        id="volumeBar"
-        type="range"
-        min="0"
-        max="100"
-        value="80"
-      >
-
+      <span aria-hidden="true">◖))</span>
+      <input id="volumeBar" type="range" min="0" max="100" value="80" aria-label="Volumen">
     </div>
-
   </footer>
-
 </div>
 
 <audio id="audio" preload="metadata"></audio>
-
 
 <!-- SUBIR CANCIÓN -->
 
@@ -1417,54 +571,11 @@ input[type=range]{
 </div>
 
 
-<!-- TARJETA DE BANNERS -->
-
-<div id="bannerModal" class="modal">
-
-  <div class="modal-card">
-
-    <div class="title">
-      Elige tu banner
-    </div>
-
-    <div id="bannerGrid" class="banner-grid"></div>
-
-    <input
-      id="bannerFileInput"
-      type="file"
-      accept="image/*"
-      hidden
-    >
-
-    <div class="modal-actions">
-
-      <button
-        id="bannerUploadBtn"
-        class="primary-btn"
-        type="button"
-      >
-        📷 Subir mi foto
-      </button>
-
-      <button
-        id="bannerCloseBtn"
-        class="secondary-btn"
-        type="button"
-      >
-        Cerrar
-      </button>
-
-    </div>
-
-  </div>
-
-</div>
-
 
 <div id="toast" class="toast"></div>
 
-
 <script>
+
 /* ============================================================
    ESTADO
 ============================================================ */
@@ -1476,8 +587,8 @@ let ME = null;
 let tracks = [];          // canciones cargadas (la lista actual)
 let total = 0;            // total que existe con el filtro actual
 let query = "";
-let sortBy = "created";
-let sortOrder = "desc";
+let sortBy = "title";
+let sortOrder = "asc";
 let loadingList = false;
 
 let currentTrack = null;  // canción en el reproductor
@@ -1734,38 +845,6 @@ async function loadLimits(){
 
 
 /* ============================================================
-   ESPACIO
-============================================================ */
-
-async function loadStorage(){
-
-  try{
-
-    const data = await api("/api/storage");
-
-    const percent = Math.min(100, (data.used_bytes / data.quota_bytes) * 100);
-
-    const bar = $("storageBar");
-
-    bar.style.width = percent + "%";
-    bar.classList.toggle("full", percent >= 90);
-
-    $("storageText").textContent =
-      formatBytes(data.used_bytes) + " de " + formatBytes(data.quota_bytes);
-
-    $("storageSub").textContent =
-      data.track_count + (data.track_count === 1 ? " canción" : " canciones");
-
-  }catch(error){
-
-    if(!error.redirected){
-      $("storageText").textContent = "No disponible";
-    }
-  }
-}
-
-
-/* ============================================================
    BIBLIOTECA
 ============================================================ */
 
@@ -1810,138 +889,110 @@ async function loadTracks(reset = true){
 
 
 function renderList(){
-
   const box = $("list");
+  box.replaceChildren();
 
-  box.innerHTML = "";
-
-  $("count").textContent =
-    total + (total === 1 ? " canción" : " canciones");
+  $("count").textContent = total + (total === 1 ? " canción" : " canciones");
 
   if(!tracks.length){
-
     const empty = document.createElement("div");
-
     empty.className = "empty";
-
     empty.textContent = query
       ? "No se encontró ninguna canción con esa búsqueda."
-      : "Tu biblioteca está vacía. Usa «Subir canción» para empezar.";
-
+      : "Todavía no has añadido canciones. Usa «Subir canción» para comenzar.";
     box.appendChild(empty);
-
     return;
   }
 
-  tracks.forEach(track => {
-
+  tracks.forEach((track, index) => {
+    const isPlaying = !!(currentTrack && currentTrack.id === track.id);
     const row = document.createElement("div");
-
-    row.className = "row" +
-      (currentTrack && currentTrack.id === track.id ? " playing" : "");
-
+    row.className = "row" + (isPlaying ? " playing" : "");
     row.dataset.id = track.id;
-
+    row.tabIndex = 0;
+    row.setAttribute("role", "button");
+    row.setAttribute("aria-label", "Reproducir " + (track.title || track.original_name || "canción"));
     row.onclick = () => playTrack(track);
+    row.onkeydown = event => {
+      if((event.key === "Enter" || event.key === " ") && event.target === row){
+        event.preventDefault();
+        playTrack(track);
+      }
+    };
 
-    const icon = document.createElement("div");
-
-    icon.className = "row-icon";
-
-    if(currentTrack && currentTrack.id === track.id){
-
-      const eq = document.createElement("div");
-
-      eq.className = "eq" + (audio.paused ? " paused" : "");
-      eq.innerHTML = "<i></i><i></i><i></i>";
-
-      icon.appendChild(eq);
-
-    }else{
-
-      icon.textContent = "🎵";
-    }
+    const number = document.createElement("div");
+    number.className = "track-index";
+    number.textContent = isPlaying ? "♫" : String(index + 1);
 
     const main = document.createElement("div");
+    main.className = "track-main";
 
-    main.className = "row-main";
+    const art = document.createElement("div");
+    art.className = "track-art";
+    art.textContent = isPlaying && !audio.paused ? "♫" : "♪";
+
+    const copy = document.createElement("div");
+    copy.className = "track-main-copy";
 
     const title = document.createElement("div");
-
     title.className = "row-title";
-    title.textContent = track.title;
-    title.title = track.title;
+    title.textContent = track.title || track.original_name || "Sin título";
+    title.title = title.textContent;
 
     const sub = document.createElement("div");
-
     sub.className = "row-sub";
     sub.textContent = track.artist || "Artista desconocido";
 
-    main.append(title, sub);
+    copy.append(title, sub);
+    main.append(art, copy);
 
-    const extra = document.createElement("div");
+    const album = document.createElement("div");
+    album.className = "row-album";
+    album.textContent = track.album || "—";
+    album.title = album.textContent;
 
-    extra.className = "row-extra";
-    extra.textContent = [track.album, track.genre].filter(Boolean).join(" · ");
+    const genre = document.createElement("div");
+    genre.className = "row-genre";
+    genre.textContent = track.genre || "—";
+    genre.title = genre.textContent;
 
     const size = document.createElement("div");
-
     size.className = "row-size";
     size.textContent = formatBytes(track.size_bytes);
 
     const actions = document.createElement("div");
-
     actions.className = "row-actions";
 
-    const download = document.createElement("button");
-
-    download.className = "icon-btn";
-    download.type = "button";
-    download.title = "Descargar";
-    download.textContent = "⬇";
-    download.onclick = event => {
-      event.stopPropagation();
-      downloadTrack(track);
+    const makeAction = (label, symbol, className, handler) => {
+      const button = document.createElement("button");
+      button.className = "icon-btn" + (className ? " " + className : "");
+      button.type = "button";
+      button.title = label;
+      button.setAttribute("aria-label", label + ": " + (track.title || "canción"));
+      button.textContent = symbol;
+      button.onclick = event => {
+        event.stopPropagation();
+        handler(track);
+      };
+      return button;
     };
 
-    const edit = document.createElement("button");
+    actions.append(
+      makeAction("Descargar", "↓", "", downloadTrack),
+      makeAction("Editar", "✎", "", openEdit),
+      makeAction("Eliminar", "×", "del", deleteTrack)
+    );
 
-    edit.className = "icon-btn sec";
-    edit.type = "button";
-    edit.title = "Editar";
-    edit.textContent = "✏";
-    edit.onclick = event => {
-      event.stopPropagation();
-      openEdit(track);
-    };
-
-    const remove = document.createElement("button");
-
-    remove.className = "icon-btn del";
-    remove.type = "button";
-    remove.title = "Eliminar";
-    remove.textContent = "🗑";
-    remove.onclick = event => {
-      event.stopPropagation();
-      deleteTrack(track);
-    };
-
-    actions.append(download, edit, remove);
-
-    row.append(icon, main, extra, size, actions);
-
+    row.append(number, main, album, genre, size, actions);
     box.appendChild(row);
   });
 
   if(tracks.length < total){
-
     const more = document.createElement("button");
-
     more.className = "more-btn";
     more.type = "button";
-    more.textContent = "Cargar más (" + (total - tracks.length) + ")";
+    more.textContent = "Cargar más canciones · " + (total - tracks.length) + " restantes";
     more.onclick = () => loadTracks(false);
-
     box.appendChild(more);
   }
 }
@@ -2218,7 +1269,7 @@ audio.addEventListener("ended", () => {
   playNext(false);
 });
 
-// El enlace de reproducción dura 30 minutos: si caduca, se pide otro y sigue donde iba
+// Si el enlace de reproducción caduca, se solicita otro y se intenta continuar
 audio.addEventListener("error", () => {
 
   if(!currentTrack || retriedTicket){
@@ -2350,7 +1401,6 @@ async function deleteTrack(track){
     showToast("Canción eliminada.");
 
     await loadTracks(true);
-    await loadStorage();
 
   }catch(error){
 
@@ -2737,8 +1787,7 @@ function submitUpload(){
       showToast("Canción subida.");
 
       await loadTracks(true);
-      await loadStorage();
-
+  
       return;
     }
 
@@ -2801,248 +1850,34 @@ async function logout(){
 
 
 /* ============================================================
-   BANNERS
-============================================================ */
-
-/*
-  Se guarda por usuario en este navegador:
-    smartsound_banner_<usuario>         -> "banner1.png" | "custom" | ""
-    smartsound_banner_<usuario>_custom  -> foto personalizada (data URL)
-*/
-
-function bannerKey(){
-
-  return BANNER_STORAGE_PREFIX + (ME?.username || "");
-}
-
-
-function storageGet(key){
-
-  try{
-    return localStorage.getItem(key) || "";
-  }catch(error){
-    return "";
-  }
-}
-
-
-function storageSet(key, value){
-
-  try{
-
-    if(value){
-      localStorage.setItem(key, value);
-    }else{
-      localStorage.removeItem(key);
-    }
-
-    return true;
-
-  }catch(error){
-
-    return false;
-  }
-}
-
-
-function applyBanner(src){
-
-  const center = $("center");
-
-  if(!src){
-
-    center.style.backgroundImage = "";
-
-    return;
-  }
-
-  center.style.backgroundImage =
-    `linear-gradient(rgba(20,24,30,${BANNER_DIM}),rgba(20,24,30,${BANNER_DIM})), url("${src}")`;
-}
-
-
-function currentBannerSrc(){
-
-  const choice = storageGet(bannerKey());
-
-  if(choice === "custom"){
-    return storageGet(bannerKey() + "_custom");
-  }
-
-  return choice;
-}
-
-
-function renderBannerGrid(){
-
-  const grid = $("bannerGrid");
-
-  const choice = storageGet(bannerKey());
-  const custom = storageGet(bannerKey() + "_custom");
-
-  grid.innerHTML = "";
-
-  const addOption = (label, preview, value) => {
-
-    const button = document.createElement("button");
-
-    button.type = "button";
-    button.className = "banner-opt" + (choice === value ? " active" : "");
-
-    if(preview){
-
-      const img = document.createElement("img");
-
-      img.src = preview;
-      img.alt = label;
-
-      img.onerror = () => {
-
-        img.onerror = null;
-
-        const missing = document.createElement("div");
-
-        missing.className = "banner-none";
-        missing.textContent = "No encontrado";
-
-        img.replaceWith(missing);
-      };
-
-      button.appendChild(img);
-
-    }else{
-
-      const none = document.createElement("div");
-
-      none.className = "banner-none";
-      none.textContent = "Fondo gris";
-
-      button.appendChild(none);
-    }
-
-    const text = document.createElement("div");
-
-    text.textContent = label;
-
-    button.appendChild(text);
-
-    button.onclick = () => selectBanner(value);
-
-    grid.appendChild(button);
-  };
-
-  BANNERS.forEach(banner => addOption(banner.name, banner.file, banner.file));
-
-  if(custom){
-    addOption("Mi foto", custom, "custom");
-  }
-
-  addOption("Sin banner", "", "");
-}
-
-
-function selectBanner(value){
-
-  storageSet(bannerKey(), value);
-
-  applyBanner(currentBannerSrc());
-
-  renderBannerGrid();
-}
-
-
-function openBannerModal(){
-
-  renderBannerGrid();
-
-  $("bannerModal").classList.add("show");
-}
-
-
-function closeBannerModal(){
-
-  $("bannerModal").classList.remove("show");
-}
-
-
-function fileToBannerData(file){
-
-  return new Promise((resolve, reject) => {
-
-    const reader = new FileReader();
-
-    reader.onerror = () => reject(new Error("No se pudo leer la imagen."));
-
-    reader.onload = () => {
-
-      const img = new Image();
-
-      img.onerror = () => reject(new Error("El archivo no es una imagen válida."));
-
-      img.onload = () => {
-
-        // Reduce la foto para que quepa en el almacenamiento del navegador
-        const scale = Math.min(
-          1,
-          CUSTOM_BANNER_MAX_SIDE / Math.max(img.width, img.height)
-        );
-
-        const canvas = document.createElement("canvas");
-
-        canvas.width = Math.max(1, Math.round(img.width * scale));
-        canvas.height = Math.max(1, Math.round(img.height * scale));
-
-        canvas.getContext("2d").drawImage(img, 0, 0, canvas.width, canvas.height);
-
-        resolve(canvas.toDataURL("image/jpeg", CUSTOM_BANNER_QUALITY));
-      };
-
-      img.src = reader.result;
-    };
-
-    reader.readAsDataURL(file);
-  });
-}
-
-
-async function uploadBanner(file){
-
-  if(!file){
-    return;
-  }
-
-  if(!file.type.startsWith("image/")){
-
-    showToast("Elige una imagen (JPG, PNG, WEBP...).");
-
-    return;
-  }
-
-  try{
-
-    const data = await fileToBannerData(file);
-
-    if(!storageSet(bannerKey() + "_custom", data)){
-
-      showToast("La foto es demasiado grande para guardarla.");
-
-      return;
-    }
-
-    selectBanner("custom");
-
-    showToast("Banner actualizado.");
-
-  }catch(error){
-
-    showToast(error.message);
-  }
-}
-
-
-/* ============================================================
    EVENTOS
 ============================================================ */
+
+
+$("navSongs").onclick = () => {
+  $("navSongs").classList.add("active");
+  $("navRecent").classList.remove("active");
+  $("viewTitle").textContent = "Canciones";
+  $("viewDescription").textContent = "Tu música, organizada en un solo lugar.";
+  sortBy = $("sort").value = "title";
+  sortOrder = "asc";
+  $("orderBtn").textContent = "▲";
+  query = $("search").value.trim();
+  loadTracks(true);
+};
+
+$("navRecent").onclick = () => {
+  $("navRecent").classList.add("active");
+  $("navSongs").classList.remove("active");
+  $("viewTitle").textContent = "Añadidas recientemente";
+  $("viewDescription").textContent = "Las canciones que has subido más recientemente.";
+  sortBy = $("sort").value = "created";
+  sortOrder = "desc";
+  $("orderBtn").textContent = "▼";
+  query = $("search").value.trim();
+  loadTracks(true);
+};
+
 
 $("uploadBtn").onclick = openUpload;
 $("upSubmit").onclick = submitUpload;
@@ -3051,29 +1886,6 @@ $("upCancel").onclick = closeUpload;
 $("edSave").onclick = saveEdit;
 $("edCancel").onclick = closeEdit;
 
-$("bannerOpenBtn").onclick = openBannerModal;
-$("bannerCloseBtn").onclick = closeBannerModal;
-
-$("bannerUploadBtn").onclick = () => $("bannerFileInput").click();
-
-$("bannerFileInput").addEventListener("change", event => {
-
-  const file = event.target.files?.[0];
-
-  if(file){
-    uploadBanner(file);
-  }
-
-  event.target.value = "";
-});
-
-// Clic fuera de la tarjeta cierra banners y edición (la subida y los diálogos no)
-$("bannerModal").addEventListener("click", event => {
-
-  if(event.target.id === "bannerModal"){
-    closeBannerModal();
-  }
-});
 
 $("editModal").addEventListener("click", event => {
 
@@ -3139,7 +1951,6 @@ document.addEventListener("keydown", event => {
     }
 
     closeEdit();
-    closeBannerModal();
 
     return;
   }
@@ -3207,16 +2018,14 @@ window.addEventListener("beforeunload", event => {
 
   $("app").style.display = "grid";
 
-  applyBanner(currentBannerSrc());
 
   await Promise.all([
     loadLimits(),
-    loadStorage(),
     loadTracks(true)
   ]);
 
 })();
-</script>
 
+</script>
 </body>
 </html>

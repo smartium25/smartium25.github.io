@@ -100,6 +100,13 @@ const APPS = [
 const HUB_TITLE = "Smart Hub";
 const FOOTER_TEXT = "Smart-Ecosystem";
 
+// Pon aquí los enlaces reales de descarga de Smart-App.
+// Si un enlace está vacío, el botón avisará que falta configurarlo.
+const SMART_APP_DOWNLOADS = {
+    android: "https://TU-DIRECCION-PUBLICA.trycloudflare.com/download/android",
+    pc: "https://TU-DIRECCION-PUBLICA.trycloudflare.com/download/windows"
+};
+
 // Vista inicial: "grid" (tarjetas), "list" (lista) o "compact" (iconos)
 const DEFAULT_VIEW = "grid";
 
@@ -481,6 +488,85 @@ footer{
     font-size:.9rem;
 }
 
+/* ---------- Promoción de Smart-App debajo del pie ---------- */
+.smart-app-promo{
+    width:min(100%, 900px);
+    margin:0 auto 34px;
+    padding:28px 22px;
+    text-align:center;
+    border:1px solid rgba(255,215,0,.30);
+    border-radius:18px;
+    background:linear-gradient(145deg,rgba(255,215,0,.08),rgba(22,27,34,.96) 55%,rgba(88,166,255,.06));
+    box-shadow:0 0 26px rgba(255,215,0,.07);
+}
+
+.smart-app-promo h2{
+    margin:0 0 8px;
+    color:var(--gold);
+    font-size:clamp(1.35rem,3vw,1.85rem);
+    line-height:1.3;
+}
+
+.smart-app-promo p{
+    color:var(--muted);
+    margin:0 auto 20px;
+    max-width:600px;
+    font-size:.95rem;
+}
+
+.smart-app-downloads{
+    display:flex;
+    align-items:center;
+    justify-content:center;
+    flex-wrap:wrap;
+    gap:12px;
+}
+
+.smart-app-download-btn{
+    display:inline-flex;
+    align-items:center;
+    justify-content:center;
+    gap:9px;
+    min-width:190px;
+    padding:12px 20px;
+    border:1px solid var(--gold);
+    border-radius:10px;
+    background:linear-gradient(45deg,var(--gold),var(--gold-2));
+    color:#111;
+    text-decoration:none;
+    font-weight:800;
+    font-size:.95rem;
+    transition:transform .2s, box-shadow .2s, opacity .2s;
+}
+
+.smart-app-download-btn:hover,
+.smart-app-download-btn:focus-visible{
+    transform:translateY(-3px);
+    box-shadow:0 6px 20px rgba(255,215,0,.20);
+    outline:2px solid var(--gold);
+    outline-offset:3px;
+}
+
+.smart-app-download-btn.is-unconfigured{
+    cursor:pointer;
+    background:var(--surface-2);
+    color:var(--text);
+    border-color:var(--border);
+}
+
+.smart-app-status{
+    min-height:1.4em;
+    margin:14px 0 0 !important;
+    font-size:.85rem !important;
+    color:var(--muted);
+}
+
+@media(max-width:560px){
+    .smart-app-promo{margin:0 14px 24px;width:calc(100% - 28px);padding:24px 16px;}
+    .smart-app-downloads{flex-direction:column;}
+    .smart-app-download-btn{width:100%;min-width:0;}
+}
+
 /* =========================================================
    MÓVIL
    ========================================================= */
@@ -573,6 +659,22 @@ footer{
 
 <footer id="footer"></footer>
 
+<section class="smart-app-promo" aria-labelledby="smartAppPromoTitle">
+    <h2 id="smartAppPromoTitle">¿Aún no usas Smart-App? ¡Descárgala!</h2>
+    <p>Lleva Smart contigo. Elige tu dispositivo para obtener la aplicación.</p>
+    <div class="smart-app-downloads">
+        <a class="smart-app-download-btn" id="downloadSmartAndroid" href="#">
+            <span aria-hidden="true">🤖</span>
+            <span>Descargar para Android</span>
+        </a>
+        <a class="smart-app-download-btn" id="downloadSmartPC" href="#">
+            <span aria-hidden="true">💻</span>
+            <span>Descargar para PC</span>
+        </a>
+    </div>
+    <p class="smart-app-status" id="smartAppDownloadStatus" role="status" aria-live="polite"></p>
+</section>
+
 <script>
 
 const $ = id => document.getElementById(id);
@@ -591,6 +693,32 @@ $("hubTitle").textContent = HUB_TITLE;
 $("footer").textContent = FOOTER_TEXT;
 
 document.title = HUB_TITLE;
+
+// Configura los botones de descarga sin inventar enlaces.
+function configureSmartAppDownload(buttonId, url, platformName) {
+    const button = $(buttonId);
+    const status = $("smartAppDownloadStatus");
+    const downloadUrl = String(url || "").trim();
+
+    if (downloadUrl) {
+        button.href = downloadUrl;
+        button.target = "_blank";
+        button.rel = "noopener noreferrer";
+        button.classList.remove("is-unconfigured");
+        button.removeAttribute("aria-disabled");
+    } else {
+        button.href = "#";
+        button.classList.add("is-unconfigured");
+        button.setAttribute("aria-disabled", "true");
+        button.addEventListener("click", event => {
+            event.preventDefault();
+            status.textContent = `Falta configurar el enlace de descarga para ${platformName} en SMART_APP_DOWNLOADS.`;
+        });
+    }
+}
+
+configureSmartAppDownload("downloadSmartAndroid", SMART_APP_DOWNLOADS.android, "Android");
+configureSmartAppDownload("downloadSmartPC", SMART_APP_DOWNLOADS.pc, "PC");
 
 
 /* =========================================================

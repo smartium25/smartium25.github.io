@@ -5,1240 +5,305 @@
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <meta name="theme-color" content="#121212">
 <title>Smart-Cloud</title>
+<script src="./url.js"></script>
+<script>
+/* Expone URLS en window y recoge/sincroniza el Smart-Token (URL o almacenamiento) */
+(function(){try{window.URLS=URLS;var u=new URL(location.href),h=new URLSearchParams(u.hash.slice(1)),K=['smart_token','smart_account_token','knfoundation_token'],t=u.searchParams.get('token')||h.get('token');for(var i=0;!t&&i<K.length;i++)t=localStorage.getItem(K[i]);if(t){t=String(t).replace(/^"|"$/g,'').trim();K.forEach(function(k){localStorage.setItem(k,t)})}if(u.searchParams.has('token')||h.has('token')){u.searchParams.delete('token');h.delete('token');u.hash=h.toString();history.replaceState(null,'',u.pathname+u.search+u.hash)}}catch(e){}})();
+</script>
 <style>
-:root{
-  --bg:#121212;--panel:#181818;--panel2:#202020;--card:#242424;--border:#353535;
-  --cyan:#00bcd4;--cyan-bright:#00f0ff;--green:#42d66f;--red:#ff626d;--yellow:#ffd166;
-  --text:#f5f5f5;--muted:#909090;--shadow:0 0 18px rgba(0,188,212,.10)
-}
+:root{--bg:#121212;--panel:#181818;--panel2:#202020;--border:#353535;--cyan:#00bcd4;--cyan2:#00f0ff;--green:#42d66f;--red:#ff626d;--text:#f5f5f5;--muted:#909090}
 *{box-sizing:border-box}
 html,body{margin:0;min-height:100%;background:var(--bg);color:var(--text);font-family:Arial,Helvetica,sans-serif}
-body{min-height:100vh}
-button,input,select,textarea{font:inherit}
-button{cursor:pointer}
-button:disabled{opacity:.55;cursor:not-allowed}
+button,input,select,textarea{font:inherit}button{cursor:pointer}button:disabled{opacity:.55;cursor:not-allowed}
 .hidden{display:none!important}
 #app{min-height:100vh;display:flex;flex-direction:column}
 .topbar{height:62px;display:flex;align-items:center;justify-content:space-between;gap:16px;padding:0 24px;background:var(--panel);border-bottom:1px solid var(--border);position:sticky;top:0;z-index:10}
-.brand{font-weight:800;font-size:19px;letter-spacing:-.3px}
-.brand span{color:var(--cyan-bright);text-shadow:0 0 10px rgba(0,240,255,.25)}
-.top-actions{display:flex;align-items:center;gap:14px}
-.username{font-size:12px;color:var(--cyan-bright)}
-.btn{border:1px solid var(--border);background:var(--panel2);color:var(--text);padding:9px 13px;border-radius:4px;font-size:12px;transition:.15s}
-.btn:hover{border-color:var(--cyan);box-shadow:0 0 10px rgba(0,188,212,.12)}
-.btn.primary{background:var(--cyan);color:#031316;border-color:var(--cyan);font-weight:800}
-.btn.primary:hover{background:var(--cyan-bright);box-shadow:0 0 14px rgba(0,240,255,.25)}
-.btn.danger{border-color:#693238;color:#ff9da4;background:#291b1d}
-.btn.small{padding:6px 9px;font-size:11px}
+.brand{font-weight:800;font-size:19px}.brand span{color:var(--cyan2)}
+.top-actions{display:flex;align-items:center;gap:14px}.username{font-size:12px;color:var(--cyan2)}
+.btn{border:1px solid var(--border);background:var(--panel2);color:var(--text);padding:9px 13px;border-radius:4px;font-size:12px}
+.btn:hover{border-color:var(--cyan)}.btn.primary{background:var(--cyan);color:#031316;border-color:var(--cyan);font-weight:800}.btn.primary:hover{background:var(--cyan2)}
+.btn.danger{border-color:#693238;color:#ff9da4;background:#291b1d}.btn.small{padding:6px 9px;font-size:11px}
 main{width:100%;max-width:1500px;margin:0 auto;padding:23px 24px 30px;flex:1}
 .auth-screen{min-height:calc(100vh - 62px);display:grid;place-items:center;padding:25px}
 .auth-box{width:min(430px,100%);background:var(--panel);border:1px solid var(--border);padding:30px}
-.auth-box h1{font-size:26px;margin:0 0 10px}
-.auth-box p{font-size:13px;line-height:1.6;color:var(--muted);margin:0 0 24px}
-.auth-actions{display:flex;gap:10px;flex-wrap:wrap}
-.auth-actions .btn{flex:1;min-width:130px}
-.status{font-size:12px;color:var(--muted);line-height:1.5;min-height:16px}
-.status.error{color:var(--red)}.status.success{color:var(--green)}
-.overview{display:grid;grid-template-columns:minmax(220px,1fr) minmax(240px,340px);gap:18px;align-items:stretch;margin-bottom:20px}
-.page-heading h1{font-size:25px;margin:0 0 6px;font-weight:800}
-.page-heading p{margin:0;color:var(--muted);font-size:12px}
-.storage-card{background:var(--panel);border:1px solid var(--border);padding:17px 18px;min-width:0}
-.storage-row{display:flex;align-items:baseline;justify-content:space-between;gap:12px}
-.storage-label{font-size:12px;color:var(--muted)}
-.storage-amount{font-size:13px;font-weight:700;white-space:nowrap}
-.progress{height:5px;background:#353535;margin-top:12px;overflow:hidden;border-radius:2px}
-.progress-fill{height:100%;width:0;background:var(--cyan);box-shadow:0 0 9px rgba(0,240,255,.45);transition:width .2s}
+.auth-box h1{font-size:26px;margin:0 0 10px}.auth-box p{font-size:13px;line-height:1.6;color:var(--muted);margin:0 0 24px}
+.auth-actions{display:flex;gap:10px;flex-wrap:wrap}.auth-actions .btn{flex:1;min-width:130px}
+.status{font-size:12px;color:var(--muted);line-height:1.5;min-height:16px}.status.error{color:var(--red)}
+.overview{display:grid;grid-template-columns:minmax(220px,1fr) minmax(240px,340px);gap:18px;margin-bottom:20px}
+.page-heading h1{font-size:25px;margin:0 0 6px}.page-heading p{margin:0;color:var(--muted);font-size:12px}
+.storage-card{background:var(--panel);border:1px solid var(--border);padding:17px 18px}
+.storage-row{display:flex;align-items:baseline;justify-content:space-between;gap:12px}.storage-label{font-size:12px;color:var(--muted)}.storage-amount{font-size:13px;font-weight:700}
+.progress{height:5px;background:#353535;margin-top:12px;overflow:hidden;border-radius:2px}.progress-fill{height:100%;width:0;background:var(--cyan);transition:width .2s}
 .storage-hint{font-size:10px;color:var(--muted);margin-top:8px}
 .workspace{display:grid;grid-template-columns:220px minmax(0,1fr);gap:17px;align-items:start}
 .sidebar{background:var(--panel);border:1px solid var(--border);padding:12px 0}
 .side-label{padding:6px 15px 10px;color:#696969;font-size:10px;text-transform:uppercase;letter-spacing:.8px}
-.category{width:100%;text-align:left;background:transparent;border:0;border-left:3px solid transparent;color:#bdbdbd;padding:11px 16px;font-size:12px;display:flex;justify-content:space-between;align-items:center;gap:8px}
-.category:hover{background:#202020;color:#fff}
-.category.active{background:#202426;color:var(--cyan-bright);border-left-color:var(--cyan-bright);text-shadow:0 0 8px rgba(0,240,255,.12)}
-.category .cat-count{color:#767676;font-size:10px}
+.category{width:100%;text-align:left;background:transparent;border:0;border-left:3px solid transparent;color:#bdbdbd;padding:11px 16px;font-size:12px;display:flex;justify-content:space-between;align-items:center}
+.category:hover{background:#202020;color:#fff}.category.active{background:#202426;color:var(--cyan2);border-left-color:var(--cyan2)}
+.cat-count{color:#767676;font-size:10px}
 .file-area{min-width:0;background:var(--panel);border:1px solid var(--border)}
 .toolbar{display:flex;align-items:center;gap:9px;flex-wrap:wrap;padding:13px;border-bottom:1px solid var(--border)}
 .search{flex:1;min-width:160px;height:36px;background:#111;border:1px solid var(--border);color:var(--text);padding:0 11px;border-radius:4px;outline:none;font-size:12px}
-.search:focus,select:focus,input:focus,textarea:focus{border-color:var(--cyan);outline:none;box-shadow:0 0 0 1px rgba(0,188,212,.12)}
-select{height:36px;background:#191919;border:1px solid var(--border);color:var(--text);border-radius:4px;padding:0 9px;font-size:11px;max-width:100%}
-.file-summary{padding:11px 15px;display:flex;align-items:center;justify-content:space-between;gap:10px;border-bottom:1px solid var(--border);color:var(--muted);font-size:11px}
+select{height:36px;background:#191919;border:1px solid var(--border);color:var(--text);border-radius:4px;padding:0 9px;font-size:11px}
+.file-summary{padding:11px 15px;display:flex;justify-content:space-between;gap:10px;border-bottom:1px solid var(--border);color:var(--muted);font-size:11px}
 .file-list{padding:5px 13px 12px;min-height:320px}
 .file-row{display:grid;grid-template-columns:minmax(0,1fr) auto;align-items:center;gap:12px;padding:13px 8px;border-bottom:1px solid #292929}
-.file-row:last-child{border-bottom:0}
 .file-main{min-width:0;display:flex;align-items:center;gap:12px}
-.file-icon{width:39px;height:43px;flex:0 0 auto;display:grid;place-items:center;border:1px solid #414141;background:#202020;color:var(--cyan);font-size:10px;font-weight:800;border-radius:3px;box-shadow:inset 0 0 8px rgba(0,188,212,.04)}
-.file-name{font-size:12px;font-weight:700;overflow-wrap:anywhere}
-.file-meta{font-size:10px;color:var(--muted);margin-top:5px;display:flex;gap:8px;flex-wrap:wrap}
+.file-icon{width:39px;height:43px;flex:0 0 auto;display:grid;place-items:center;border:1px solid #414141;background:#202020;color:var(--cyan);font-size:10px;font-weight:800;border-radius:3px}
+.file-name{font-size:12px;font-weight:700;overflow-wrap:anywhere}.file-meta{font-size:10px;color:var(--muted);margin-top:5px;display:flex;gap:8px;flex-wrap:wrap}
 .file-actions{display:flex;gap:6px;flex-wrap:wrap;justify-content:flex-end}
 .empty-files{min-height:280px;display:grid;place-items:center;text-align:center;color:var(--muted);font-size:12px;padding:24px}
-.empty-files strong{display:block;color:var(--text);font-size:14px;margin-bottom:7px}
 .pagination{display:flex;align-items:center;justify-content:center;gap:12px;padding:12px;border-top:1px solid var(--border)}
-#globalStatus{position:fixed;bottom:15px;left:50%;transform:translateX(-50%);z-index:50;max-width:min(700px,calc(100vw - 30px));padding:10px 15px;background:#202020;border:1px solid #444;border-left:3px solid var(--cyan);font-size:12px;box-shadow:0 0 18px rgba(0,240,255,.1)}
-.modal{position:fixed;inset:0;z-index:100;background:rgba(0,0,0,.78);display:none;align-items:center;justify-content:center;padding:20px}
-.modal.open{display:flex}
-.modal-box{width:min(1120px,100%);max-height:94vh;display:flex;flex-direction:column;background:#181818;border:1px solid #444;box-shadow:0 0 28px rgba(0,240,255,.08)}
-.modal-head{display:flex;align-items:center;justify-content:space-between;gap:12px;padding:13px 16px;border-bottom:1px solid var(--border)}
-.modal-title{font-size:14px;font-weight:700;overflow-wrap:anywhere}
-.modal-body{padding:15px;overflow:auto;min-height:150px}
+#globalStatus{position:fixed;bottom:15px;left:50%;transform:translateX(-50%);z-index:50;max-width:min(700px,calc(100vw - 30px));padding:10px 15px;background:#202020;border:1px solid #444;border-left:3px solid var(--cyan);font-size:12px}
+.modal{position:fixed;inset:0;z-index:100;background:rgba(0,0,0,.78);display:none;align-items:center;justify-content:center;padding:20px}.modal.open{display:flex}
+.modal-box{width:min(1120px,100%);max-height:94vh;display:flex;flex-direction:column;background:#181818;border:1px solid #444}
+.modal-head,.modal-foot{display:flex;align-items:center;justify-content:space-between;gap:12px;padding:13px 16px}.modal-head{border-bottom:1px solid var(--border)}.modal-foot{border-top:1px solid var(--border);flex-wrap:wrap}
+.modal-title{font-size:14px;font-weight:700;overflow-wrap:anywhere}.modal-body{padding:15px;overflow:auto;min-height:150px}
+.modal-actions{display:flex;gap:8px;flex-wrap:wrap}.note{color:var(--muted);font-size:10px;line-height:1.5}
 .preview-frame{width:100%;height:min(68vh,720px);border:1px solid var(--border);background:#111}
-.preview-image{display:block;max-width:100%;max-height:58vh;object-fit:contain;margin:auto;background:#171717}
-.canvas-wrap{max-height:60vh;overflow:auto;display:grid;place-items:center;background:#101010;border:1px solid #303030;padding:10px}
-#imageCanvas{max-width:100%;height:auto}
-.editor-tools{display:flex;flex-wrap:wrap;gap:8px;align-items:center;margin-top:13px}
-.editor-tools label{font-size:11px;color:var(--muted)}
-.range{width:130px;accent-color:var(--cyan)}
-.editor-note{width:100%;min-height:100px;resize:vertical;background:#101010;color:var(--text);border:1px solid var(--border);padding:11px;font-size:12px;line-height:1.5}
+.canvas-wrap{max-height:60vh;overflow:auto;display:grid;place-items:center;background:#101010;border:1px solid #303030;padding:10px}#imageCanvas{max-width:100%;height:auto}
+.editor-tools{display:flex;flex-wrap:wrap;gap:8px;align-items:center;margin-top:13px}.editor-tools label{font-size:11px;color:var(--muted)}.range{width:130px;accent-color:var(--cyan)}
+.editor-note{width:100%;min-height:100px;resize:vertical;background:#101010;color:var(--text);border:1px solid var(--border);padding:11px;font-size:12px}
 .text-editor{width:100%;min-height:55vh;resize:vertical;background:#101010;color:var(--text);border:1px solid var(--border);padding:13px;font:12px/1.6 Consolas,monospace}
 .video-preview{width:100%;max-height:52vh;background:#000}
-.trim-grid{display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-top:12px}
-.trim-grid label{font-size:11px;color:var(--muted)}
+.trim-grid{display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-top:12px}.trim-grid label{font-size:11px;color:var(--muted)}
 .trim-grid input{display:block;width:100%;height:35px;margin-top:6px;padding:0 9px;background:#101010;color:var(--text);border:1px solid var(--border);border-radius:3px}
-.modal-foot{padding:12px 15px;border-top:1px solid var(--border);display:flex;justify-content:space-between;gap:8px;align-items:center;flex-wrap:wrap}
-.modal-actions{display:flex;gap:8px;flex-wrap:wrap}
-.note{color:var(--muted);font-size:10px;line-height:1.5}
-@media(max-width:900px){.workspace{grid-template-columns:1fr}.sidebar{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));padding:6px}.side-label{grid-column:1/-1}.category{border-left:0;border-bottom:2px solid transparent;padding:10px}.category.active{border-bottom-color:var(--cyan);border-left-color:transparent}.file-row{grid-template-columns:minmax(0,1fr)}.file-actions{justify-content:flex-start;padding-left:51px}.overview{grid-template-columns:1fr}.storage-card{max-width:none}}
-@media(max-width:560px){.topbar{padding:0 14px}.top-actions{gap:8px}.username{max-width:105px;overflow:hidden;text-overflow:ellipsis}.topbar .btn{padding:7px 9px}main{padding:16px 12px}.overview{gap:12px}.toolbar{padding:10px}.toolbar .btn{flex:1}.search{flex-basis:100%}.file-summary{align-items:flex-start}.modal{padding:7px}.modal-body{padding:10px}.trim-grid{grid-template-columns:1fr}}
+@media(max-width:900px){.workspace{grid-template-columns:1fr}.sidebar{display:grid;grid-template-columns:repeat(2,1fr);padding:6px}.side-label{grid-column:1/-1}.category{border-left:0}.file-row{grid-template-columns:1fr}.file-actions{justify-content:flex-start}.overview{grid-template-columns:1fr}}
+@media(max-width:560px){.topbar{padding:0 14px}main{padding:16px 12px}.trim-grid{grid-template-columns:1fr}}
 </style>
-<script src="./url.js"></script>
 </head>
 <body>
 <div id="app">
-  <header class="topbar">
-    <div class="brand">Smart<span>-Cloud</span></div>
-    <div class="top-actions">
-      <span id="userLabel" class="username"></span>
-      <button id="signOutBtn" class="btn small hidden">Cerrar sesión</button>
-    </div>
-  </header>
+ <header class="topbar"><div class="brand">Smart<span>-Cloud</span></div>
+  <div class="top-actions"><span id="userLabel" class="username"></span><button id="signOutBtn" class="btn small hidden">Cerrar sesión</button></div></header>
 
-  <section id="authGate" class="auth-screen hidden">
-    <div class="auth-box">
-      <h1>Tu nube, en un solo lugar.</h1>
-      <p>10 GB de almacenamiento gratis. Inicia sesión o crea una cuenta de Smart-Account para continuar.</p>
-      <div class="auth-actions">
-        <button id="loginBtn" class="btn primary">Iniciar sesión</button>
-        <button id="registerBtn" class="btn">Crear cuenta</button>
-      </div>
-      <div id="authStatus" class="status" style="margin-top:16px"></div>
-    </div>
-  </section>
+ <section id="authGate" class="auth-screen hidden"><div class="auth-box">
+  <h1>Tu nube, en un solo lugar.</h1>
+  <p>10 GB de almacenamiento gratis. Inicia sesión o crea una cuenta de Smart-Account para continuar.</p>
+  <div class="auth-actions"><button id="loginBtn" class="btn primary">Iniciar sesión</button><button id="registerBtn" class="btn">Crear cuenta</button></div>
+  <div id="authStatus" class="status" style="margin-top:16px"></div></div></section>
 
-  <main id="cloudMain" class="hidden">
-    <div class="overview">
-      <div class="page-heading">
-        <h1>Mis archivos</h1>
-        <p>Guarda, organiza y edita tus archivos en línea.</p>
-      </div>
-      <section class="storage-card">
-        <div class="storage-row">
-          <span class="storage-label">Almacenamiento usado</span>
-          <span class="storage-amount" id="storageNumbers">Cargando…</span>
-        </div>
-        <div class="progress"><div id="storageFill" class="progress-fill"></div></div>
-        <div id="storageHint" class="storage-hint">10 GB gratis</div>
-      </section>
-    </div>
-
-    <div class="workspace">
-      <aside class="sidebar">
-        <div class="side-label">Formatos</div>
-        <button class="category active" data-category="all">Todos <span class="cat-count" id="count-all"></span></button>
-        <button class="category" data-category="images">Imágenes <span class="cat-count" id="count-images"></span></button>
-        <button class="category" data-category="videos">Vídeos <span class="cat-count" id="count-videos"></span></button>
-        <button class="category" data-category="pdfs">PDF <span class="cat-count" id="count-pdfs"></span></button>
-        <button class="category" data-category="documents">Documentos <span class="cat-count" id="count-documents"></span></button>
-        <button class="category" data-category="audio">Audio <span class="cat-count" id="count-audio"></span></button>
-        <button class="category" data-category="other">Otros <span class="cat-count" id="count-other"></span></button>
-      </aside>
-
-      <section class="file-area">
-        <div class="toolbar">
-          <input id="searchInput" class="search" type="search" placeholder="Buscar archivos…" aria-label="Buscar archivos">
-          <select id="sortSelect" aria-label="Ordenar por">
-            <option value="created">Más recientes</option>
-            <option value="name">Nombre</option>
-            <option value="size">Tamaño</option>
-            <option value="updated">Última edición</option>
-            <option value="format">Formato</option>
-          </select>
-          <select id="orderSelect" aria-label="Dirección de orden">
-            <option value="desc">Descendente</option>
-            <option value="asc">Ascendente</option>
-          </select>
-          <button id="uploadBtn" class="btn primary">＋ Subir archivos</button>
-          <input id="fileInput" type="file" multiple class="hidden">
-        </div>
-        <div class="file-summary">
-          <span id="fileCount">Cargando archivos…</span>
-          <span id="listStatus"></span>
-        </div>
-        <div id="fileList" class="file-list">
-          <div class="empty-files">Cargando archivos…</div>
-        </div>
-        <div class="pagination">
-          <button id="prevBtn" class="btn small" disabled>Anterior</button>
-          <span id="pageInfo" class="status">Página 1</span>
-          <button id="nextBtn" class="btn small" disabled>Siguiente</button>
-        </div>
-      </section>
-    </div>
-  </main>
-</div>
-
-<div id="globalStatus" class="hidden" role="status"></div>
-
-<div id="editorModal" class="modal" role="dialog" aria-modal="true" aria-labelledby="editorTitle">
-  <div class="modal-box">
-    <div class="modal-head">
-      <div id="editorTitle" class="modal-title">Archivo</div>
-      <button id="closeEditorBtn" class="btn small">Cerrar ✕</button>
-    </div>
-    <div id="editorBody" class="modal-body"></div>
-    <div class="modal-foot">
-      <span id="editorStatus" class="note"></span>
-      <div id="editorActions" class="modal-actions"></div>
-    </div>
+ <main id="cloudMain" class="hidden">
+  <div class="overview">
+   <div class="page-heading"><h1>Mis archivos</h1><p>Guarda, organiza y edita tus archivos en línea.</p></div>
+   <section class="storage-card"><div class="storage-row"><span class="storage-label">Almacenamiento usado</span><span class="storage-amount" id="storageNumbers">Cargando…</span></div>
+    <div class="progress"><div id="storageFill" class="progress-fill"></div></div><div id="storageHint" class="storage-hint">10 GB gratis</div></section>
   </div>
+  <div class="workspace">
+   <aside class="sidebar"><div class="side-label">Formatos</div>
+    <button class="category active" data-category="all">Todos <span class="cat-count" id="count-all"></span></button>
+    <button class="category" data-category="images">Imágenes <span class="cat-count" id="count-images"></span></button>
+    <button class="category" data-category="videos">Vídeos <span class="cat-count" id="count-videos"></span></button>
+    <button class="category" data-category="pdfs">PDF <span class="cat-count" id="count-pdfs"></span></button>
+    <button class="category" data-category="documents">Documentos <span class="cat-count" id="count-documents"></span></button>
+    <button class="category" data-category="audio">Audio <span class="cat-count" id="count-audio"></span></button>
+    <button class="category" data-category="other">Otros <span class="cat-count" id="count-other"></span></button></aside>
+   <section class="file-area">
+    <div class="toolbar">
+     <input id="searchInput" class="search" type="search" placeholder="Buscar archivos…" aria-label="Buscar archivos">
+     <select id="sortSelect" aria-label="Ordenar por"><option value="created">Más recientes</option><option value="name">Nombre</option><option value="size">Tamaño</option><option value="updated">Última edición</option><option value="format">Formato</option></select>
+     <select id="orderSelect" aria-label="Dirección"><option value="desc">Descendente</option><option value="asc">Ascendente</option></select>
+     <button id="uploadBtn" class="btn primary">＋ Subir archivos</button><input id="fileInput" type="file" multiple class="hidden"></div>
+    <div class="file-summary"><span id="fileCount">Cargando archivos…</span><span id="listStatus"></span></div>
+    <div id="fileList" class="file-list"><div class="empty-files">Cargando archivos…</div></div>
+    <div class="pagination"><button id="prevBtn" class="btn small" disabled>Anterior</button><span id="pageInfo" class="status">Página 1</span><button id="nextBtn" class="btn small" disabled>Siguiente</button></div>
+   </section>
+  </div>
+ </main>
 </div>
+<div id="globalStatus" class="hidden" role="status"></div>
+<div id="editorModal" class="modal" role="dialog" aria-modal="true"><div class="modal-box">
+ <div class="modal-head"><div id="editorTitle" class="modal-title">Archivo</div><button id="closeEditorBtn" class="btn small">Cerrar ✕</button></div>
+ <div id="editorBody" class="modal-body"></div>
+ <div class="modal-foot"><span id="editorStatus" class="note"></span><div id="editorActions" class="modal-actions"></div></div></div></div>
 
 <script>
 (() => {
-  'use strict';
-
-  // Las URLs del ecosistema se definen exclusivamente en ./url.js.
-  if (typeof URLS === 'undefined' || !URLS || !URLS.cloud || !URLS.account || !URLS.auth) {
-    throw new Error('No se pudo cargar url.js o faltan URLS.cloud, URLS.account y URLS.auth.');
-  }
-
-  const CLOUD = URLS.cloud.replace(/\/+$/, '');
-  const ACCOUNT = URLS.account.replace(/\/+$/, '');
-  const AUTH_URL = URLS.auth;
-
-  // Única clave de sesión usada por Smart-Cloud.
-  const TOKEN_KEY = 'smart_account_token';
-  const PAGE_SIZE = 100;
-  const MAX_BROWSER_VIDEO_EDIT_BYTES = 250 * 1024 * 1024;
-
-  const state = {
-    token: null,
-    username: '',
-    category: 'all',
-    sort: 'created',
-    order: 'desc',
-    search: '',
-    offset: 0,
-    total: 0,
-    files: [],
-    quota: 10000000000,
-    used: 0,
-    activeFile: null,
-    previewUrl: null,
-    image: null,
-    imageState: {rotation:0, flip:false, gray:false, brightness:100},
-    activeObjectUrls: [],
-    ffmpeg: null,
-    pdfLibLoading: null,
-    listRequest: 0,
-    loading: false
-  };
-
-  const $ = id => document.getElementById(id);
-  const authGate = $('authGate');
-  const cloudMain = $('cloudMain');
-  const fileList = $('fileList');
-  const globalStatus = $('globalStatus');
-  const editorModal = $('editorModal');
-  const editorBody = $('editorBody');
-  const editorActions = $('editorActions');
-
-  function toast(message, type='') {
-    globalStatus.textContent = message;
-    globalStatus.className = '';
-    globalStatus.id = 'globalStatus';
-    globalStatus.classList.remove('hidden');
-    globalStatus.style.borderLeftColor = type === 'error' ? 'var(--red)' : type === 'success' ? 'var(--green)' : 'var(--cyan)';
-    clearTimeout(toast.timer);
-    toast.timer = setTimeout(() => globalStatus.classList.add('hidden'), 4500);
-  }
-
-  function setAuthStatus(message, type='') {
-    $('authStatus').textContent = message || '';
-    $('authStatus').className = 'status' + (type ? ` ${type}` : '');
-  }
-
-  function setEditorStatus(message, type='') {
-    $('editorStatus').textContent = message || '';
-    $('editorStatus').style.color = type === 'error' ? 'var(--red)' : type === 'success' ? 'var(--green)' : 'var(--muted)';
-  }
-
-  function readToken() {
-    const token = localStorage.getItem(TOKEN_KEY);
-    if (!token) return null;
-    const normalized = token.trim();
-    return /^smt_[A-Za-z0-9._~-]+$/.test(normalized) ? normalized : null;
-  }
-
-  function authHeader(token=state.token) {
-    if (!token) throw new Error('No se encontró un Smart-Token. Inicia sesión en Smart-Account.');
-    return {Authorization: `Smart-Token ${token}`};
-  }
-
-  function authDestination(mode='login') {
-    const callback = new URL(window.location.href);
-    callback.searchParams.set('smart_cloud_return', '1');
-    const destination = new URL(AUTH_URL);
-    destination.searchParams.set('redirect', callback.toString());
-    destination.searchParams.set('mode', mode);
-    return destination.toString();
-  }
-
-  function goToAuth(mode='login') {
-    sessionStorage.setItem('smart_cloud_auth_redirecting', '1');
-    window.location.assign(authDestination(mode));
-  }
-
-  function showAuthGate(message='') {
-    cloudMain.classList.add('hidden');
-    authGate.classList.remove('hidden');
-    $('signOutBtn').classList.add('hidden');
-    $('userLabel').textContent = '';
-    if (message) setAuthStatus(message, 'error');
-    else setAuthStatus('');
-  }
-
-  async function api(path, options={}) {
-    const headers = new Headers(options.headers || {});
-    headers.set('Authorization', `Smart-Token ${state.token}`);
-
-    const response = await fetch(`${CLOUD}${path}`, {
-      ...options,
-      headers,
-      cache: options.cache || 'no-store'
-    });
-
-    if (response.status === 401) {
-      localStorage.removeItem(TOKEN_KEY);
-      state.token = null;
-      throw new Error('La sesión de Smart-Account expiró. Inicia sesión de nuevo.');
-    }
-
-    let data = null;
-    const ctype = response.headers.get('content-type') || '';
-    if (ctype.includes('application/json')) {
-      data = await response.json().catch(() => ({}));
-    }
-
-    if (!response.ok) {
-      throw new Error((data && (data.detail || data.message)) || `Smart-Cloud respondió HTTP ${response.status}.`);
-    }
-
-    return {response, data};
-  }
-
-  async function boot() {
-    const found = readToken();
-
-    if (!found) {
-      const returningFromAuth = new URLSearchParams(window.location.search).has('smart_cloud_return');
-      const wasRedirecting = sessionStorage.getItem('smart_cloud_auth_redirecting') === '1';
-
-      if (returningFromAuth && wasRedirecting) {
-        sessionStorage.removeItem('smart_cloud_auth_redirecting');
-        showAuthGate('No se encontró un Smart-Token. Inicia sesión para continuar.');
-        return;
-      }
-
-      goToAuth('login');
-      return;
-    }
-
-    state.token = found;
-
-    try {
-      const {data: storage} = await api('/api/storage');
-
-      state.username = storage.username || '';
-      state.quota = Number(storage.quota_bytes) || 10000000000;
-      state.used = Number(storage.used_bytes) || 0;
-
-      $('userLabel').textContent = state.username ? `@${state.username}` : '';
-      $('signOutBtn').classList.remove('hidden');
-      authGate.classList.add('hidden');
-      cloudMain.classList.remove('hidden');
-
-      sessionStorage.removeItem('smart_cloud_auth_redirecting');
-
-      renderStorage(storage);
-      await loadFiles();
-
-    } catch (error) {
-      if (/sesión|Smart-Token|token.*inválido|token.*expir/i.test(error.message || '')) {
-        localStorage.removeItem(TOKEN_KEY);
-        state.token = null;
-        goToAuth('login');
-        return;
-      }
-
-      showAuthGate(error.message || 'No se pudo conectar con Smart-Cloud.');
-    }
-  }
-
-  function formatBytes(bytes) {
-    const n = Math.max(0, Number(bytes) || 0);
-    if (n < 1024) return `${n} B`;
-
-    const units = ['KB','MB','GB','TB'];
-    let value = n / 1024;
-    let i = 0;
-
-    while (value >= 1024 && i < units.length - 1) {
-      value /= 1024;
-      i++;
-    }
-
-    return `${value.toFixed(value >= 10 ? 1 : 2)} ${units[i]}`;
-  }
-
-  function formatDate(seconds) {
-    if (!seconds) return '—';
-
-    const date = new Date(Number(seconds) * 1000);
-    return Number.isNaN(date.getTime()) ? '—' : date.toLocaleString();
-  }
-
-  function renderStorage(storage={}) {
-    const used = Number(storage.used_bytes ?? state.used) || 0;
-    const quota = Number(storage.quota_bytes ?? state.quota) || 10000000000;
-    const free = Math.max(0, quota - used);
-    const percent = Math.min(100, quota ? (used / quota) * 100 : 0);
-
-    state.used = used;
-    state.quota = quota;
-
-    $('storageNumbers').textContent = `${formatBytes(used)} / ${formatBytes(quota)}`;
-    $('storageFill').style.width = `${percent}%`;
-    $('storageFill').style.background = percent >= 95 ? 'var(--red)' : 'var(--cyan)';
-    $('storageHint').textContent = `${percent.toFixed(1)}% usado · ${formatBytes(free)} disponibles`;
-  }
-
-  function queryString() {
-    const params = new URLSearchParams({
-      category: state.category,
-      sort: state.sort,
-      order: state.order,
-      search: state.search,
-      limit: String(PAGE_SIZE),
-      offset: String(state.offset)
-    });
-
-    return `?${params.toString()}`;
-  }
-
-  async function loadFiles() {
-    const requestId = ++state.listRequest;
-    $('fileCount').textContent = 'Cargando…';
-    $('listStatus').textContent = '';
-
-    try {
-      const {data} = await api(`/api/files${queryString()}`);
-      if (requestId !== state.listRequest) return;
-
-      state.files = Array.isArray(data.files) ? data.files : [];
-      state.total = Number(data.total) || 0;
-
-      if (data.storage) renderStorage(data.storage);
-
-      renderFileList();
-
-      $('fileCount').textContent = `${state.total} archivo${state.total === 1 ? '' : 's'}`;
-
-      const page = Math.floor(state.offset / PAGE_SIZE) + 1;
-      $('pageInfo').textContent = `Página ${page}`;
-      $('prevBtn').disabled = state.offset <= 0;
-      $('nextBtn').disabled = state.offset + PAGE_SIZE >= state.total;
-
-      updateCategoryCounts();
-
-    } catch (error) {
-      $('fileCount').textContent = 'No se pudieron cargar los archivos';
-      fileList.innerHTML = '';
-
-      const empty = document.createElement('div');
-      empty.className = 'empty-files';
-      empty.textContent = error.message;
-      fileList.appendChild(empty);
-
-      if (/sesión|Smart-Token/i.test(error.message)) showAuthGate(error.message);
-    }
-  }
-
-  async function updateCategoryCounts() {
-    const categories = ['all','images','videos','pdfs','documents','audio','other'];
-
-    await Promise.all(categories.map(async category => {
-      try {
-        const params = new URLSearchParams({
-          category,
-          sort:'created',
-          order:'desc',
-          limit:'1',
-          offset:'0'
-        });
-
-        const {data} = await api(`/api/files?${params}`);
-        const el = $(`count-${category}`);
-
-        if (el) el.textContent = Number(data.total) ? String(data.total) : '';
-      } catch (_) {}
-    }));
-  }
-
-  function extension(name) {
-    const i = String(name || '').lastIndexOf('.');
-    return i >= 0 ? name.slice(i + 1).toLowerCase() : '';
-  }
-
-  function iconLabel(file) {
-    const ext = extension(file.name);
-
-    if (file.category === 'images') return ext.toUpperCase().slice(0,4) || 'IMG';
-    if (file.category === 'videos') return 'VIDEO';
-    if (file.category === 'pdfs') return 'PDF';
-    if (file.category === 'audio') return 'AUDIO';
-    if (file.category === 'documents') return ext.toUpperCase().slice(0,4) || 'DOC';
-
-    return ext.toUpperCase().slice(0,4) || 'FILE';
-  }
-
-  function makeButton(label, className, handler) {
-    const button = document.createElement('button');
-    button.type = 'button';
-    button.className = className;
-    button.textContent = label;
-    button.addEventListener('click', handler);
-    return button;
-  }
-
-  function renderFileList() {
-    fileList.innerHTML = '';
-
-    if (!state.files.length) {
-      const empty = document.createElement('div');
-      empty.className = 'empty-files';
-
-      const inner = document.createElement('div');
-      const strong = document.createElement('strong');
-      strong.textContent = state.search ? 'Sin resultados' : 'Tu nube está vacía';
-
-      const note = document.createElement('span');
-      note.textContent = state.search ? 'Prueba otra búsqueda o categoría.' : 'Sube el primer archivo para empezar.';
-
-      inner.append(strong, note);
-      empty.appendChild(inner);
-      fileList.appendChild(empty);
-      return;
-    }
-
-    for (const file of state.files) {
-      const row = document.createElement('article');
-      row.className = 'file-row';
-
-      const main = document.createElement('div');
-      main.className = 'file-main';
-
-      const icon = document.createElement('div');
-      icon.className = 'file-icon';
-      icon.textContent = iconLabel(file);
-
-      const description = document.createElement('div');
-      description.style.minWidth = '0';
-
-      const name = document.createElement('div');
-      name.className = 'file-name';
-      name.textContent = file.name;
-
-      const meta = document.createElement('div');
-      meta.className = 'file-meta';
-
-      const size = document.createElement('span');
-      size.textContent = formatBytes(file.size_bytes);
-
-      const category = document.createElement('span');
-      category.textContent = String(file.category || 'other');
-
-      const date = document.createElement('span');
-      date.textContent = formatDate(file.updated_at || file.created_at);
-
-      meta.append(size, category, date);
-      description.append(name, meta);
-      main.append(icon, description);
-
-      const actions = document.createElement('div');
-      actions.className = 'file-actions';
-
-      actions.appendChild(makeButton('Abrir / editar', 'btn small primary', () => openEditor(file)));
-      actions.appendChild(makeButton('Descargar', 'btn small', () => downloadFile(file)));
-      actions.appendChild(makeButton('Eliminar', 'btn small danger', () => deleteFile(file)));
-
-      row.append(main, actions);
-      fileList.appendChild(row);
-    }
-  }
-
-  async function uploadFiles(fileSet) {
-    const files = Array.from(fileSet || []);
-    if (!files.length) return;
-
-    for (let index = 0; index < files.length; index++) {
-      const file = files[index];
-
-      $('listStatus').textContent = `Subiendo ${index + 1}/${files.length}: ${file.name}`;
-
-      try {
-        await xhrUpload(file);
-        toast(`Subido: ${file.name}`, 'success');
-
-      } catch (error) {
-        toast(`${file.name}: ${error.message}`, 'error');
-      }
-    }
-
-    $('listStatus').textContent = '';
-    $('fileInput').value = '';
-    await loadFiles();
-  }
-
-  function xhrUpload(file) {
-    return new Promise((resolve, reject) => {
-      const xhr = new XMLHttpRequest();
-      xhr.open('POST', `${CLOUD}/api/files/upload`);
-      xhr.setRequestHeader('Authorization', `Smart-Token ${state.token}`);
-
-      xhr.upload.onprogress = event => {
-        if (event.lengthComputable) {
-          $('listStatus').textContent = `Subiendo ${file.name} · ${Math.round(event.loaded / event.total * 100)}%`;
-        }
-      };
-
-      xhr.onload = () => {
-        let data = {};
-
-        try {
-          data = JSON.parse(xhr.responseText || '{}');
-        } catch (_) {}
-
-        if (xhr.status >= 200 && xhr.status < 300) resolve(data);
-        else reject(new Error(data.detail || `La subida falló (HTTP ${xhr.status}).`));
-      };
-
-      xhr.onerror = () => reject(new Error('No se pudo conectar con Smart-Cloud. Revisa la URL, el túnel y CORS.'));
-
-      const form = new FormData();
-      form.append('file', file, file.name);
-      xhr.send(form);
-    });
-  }
-
-  async function deleteFile(file) {
-    if (!confirm(`¿Eliminar “${file.name}” permanentemente?`)) return;
-
-    try {
-      await api(`/api/files/${encodeURIComponent(file.id)}`, {method:'DELETE'});
-      toast('Archivo eliminado.', 'success');
-      await loadFiles();
-
-    } catch (error) {
-      toast(error.message, 'error');
-    }
-  }
-
-  async function downloadFile(file) {
-    try {
-      toast(`Preparando ${file.name}…`);
-
-      const {response} = await api(`/api/files/${encodeURIComponent(file.id)}/content?download=true`);
-      const blob = await response.blob();
-      const url = URL.createObjectURL(blob);
-
-      const a = document.createElement('a');
-      a.href = url;
-      a.download = file.name;
-
-      document.body.appendChild(a);
-      a.click();
-      a.remove();
-
-      setTimeout(() => URL.revokeObjectURL(url), 30000);
-
-    } catch (error) {
-      toast(error.message, 'error');
-    }
-  }
-
-  async function getPreviewUrl(file) {
-    const {data} = await api(`/api/files/${encodeURIComponent(file.id)}/preview-ticket`, {method:'POST'});
-    return new URL(data.preview_url, `${CLOUD}/`).toString();
-  }
-
-  async function getFileBlob(file) {
-    const {response} = await api(`/api/files/${encodeURIComponent(file.id)}/content`);
-    return await response.blob();
-  }
-
-  async function saveBlobToCloud(file, blob, fileName=file.name) {
-    const form = new FormData();
-    form.append('file', blob, fileName);
-
-    const {data} = await api(`/api/files/${encodeURIComponent(file.id)}/content`, {
-      method:'PUT',
-      body:form
-    });
-
-    if (data && data.used_bytes != null) state.used = Number(data.used_bytes);
-
-    await loadFiles();
-    return data;
-  }
-
-  function addModalAction(label, primary, handler) {
-    const button = document.createElement('button');
-    button.className = `btn${primary ? ' primary' : ''}`;
-    button.textContent = label;
-    button.addEventListener('click', handler);
-    editorActions.appendChild(button);
-    return button;
-  }
-
-  function cleanupEditor() {
-    state.activeObjectUrls.forEach(url => URL.revokeObjectURL(url));
-    state.activeObjectUrls = [];
-    state.activeFile = null;
-    state.previewUrl = null;
-    state.image = null;
-    editorBody.innerHTML = '';
-    editorActions.innerHTML = '';
-    setEditorStatus('');
-  }
-
-  function closeEditor() {
-    editorModal.classList.remove('open');
-    cleanupEditor();
-  }
-
-  function openEditorShell(file) {
-    cleanupEditor();
-    state.activeFile = file;
-    $('editorTitle').textContent = file.name;
-    editorModal.classList.add('open');
-  }
-
-  async function openEditor(file) {
-    openEditorShell(file);
-    editorBody.innerHTML = '<div class="empty-files">Preparando archivo…</div>';
-
-    try {
-      const ext = extension(file.name);
-
-      if (file.category === 'images') return await openImageEditor(file, ext);
-      if (file.category === 'videos') return await openVideoEditor(file, ext);
-      if (file.category === 'pdfs' || ext === 'pdf') return await openPdfEditor(file);
-      if (['txt','md','csv','json','xml'].includes(ext)) return await openTextEditor(file);
-      if (file.category === 'audio') return await openAudioPreview(file);
-
-      return await openGenericPreview(file);
-
-    } catch (error) {
-      editorBody.innerHTML = '';
-
-      const message = document.createElement('div');
-      message.className = 'empty-files';
-      message.textContent = error.message || 'No se pudo abrir este archivo.';
-
-      editorBody.appendChild(message);
-      setEditorStatus(error.message, 'error');
-    }
-  }
-
-  async function openImageEditor(file, ext) {
-    const url = await getPreviewUrl(file);
-    state.previewUrl = url;
-
-    editorBody.innerHTML = `
-      <div class="canvas-wrap"><canvas id="imageCanvas"></canvas></div>
-      <div class="editor-tools">
-        <button id="rotateLeft" class="btn small">↶ Girar</button>
-        <button id="rotateRight" class="btn small">↷ Girar</button>
-        <button id="flipImage" class="btn small">Voltear</button>
-        <button id="grayImage" class="btn small">Blanco y negro</button>
-        <label>Brillo <input id="brightnessRange" class="range" type="range" min="40" max="160" value="100"></label>
-        <button id="resetImage" class="btn small">Restablecer</button>
-      </div>
-      <div class="note" style="margin-top:10px">Los cambios se guardan en el archivo de la nube. Los GIF animados pueden convertirse en una imagen fija al editarlos.</div>`;
-
-    const image = new Image();
-    image.crossOrigin = 'anonymous';
-    image.src = url;
-
-    await new Promise((resolve, reject) => {
-      image.onload = resolve;
-      image.onerror = () => reject(new Error('No se pudo cargar la imagen. Comprueba CORS del API de Smart-Cloud.'));
-    });
-
-    state.image = image;
-    state.imageState = {rotation:0, flip:false, gray:false, brightness:100};
-
-    const canvas = $('imageCanvas');
-
-    const render = () => {
-      const s = state.imageState;
-      const sideways = Math.abs(s.rotation % 180) === 90;
-
-      canvas.width = sideways ? image.naturalHeight : image.naturalWidth;
-      canvas.height = sideways ? image.naturalWidth : image.naturalHeight;
-
-      const ctx = canvas.getContext('2d');
-      ctx.clearRect(0,0,canvas.width,canvas.height);
-      ctx.save();
-      ctx.translate(canvas.width/2, canvas.height/2);
-      ctx.rotate(s.rotation * Math.PI / 180);
-      ctx.scale(s.flip ? -1 : 1, 1);
-      ctx.filter = `grayscale(${s.gray ? 1 : 0}) brightness(${s.brightness}%)`;
-      ctx.drawImage(image,-image.naturalWidth/2,-image.naturalHeight/2);
-      ctx.restore();
-    };
-
-    $('rotateLeft').onclick = () => {
-      state.imageState.rotation = (state.imageState.rotation + 270) % 360;
-      render();
-    };
-
-    $('rotateRight').onclick = () => {
-      state.imageState.rotation = (state.imageState.rotation + 90) % 360;
-      render();
-    };
-
-    $('flipImage').onclick = () => {
-      state.imageState.flip = !state.imageState.flip;
-      render();
-    };
-
-    $('grayImage').onclick = () => {
-      state.imageState.gray = !state.imageState.gray;
-      render();
-    };
-
-    $('brightnessRange').oninput = event => {
-      state.imageState.brightness = Number(event.target.value);
-      render();
-    };
-
-    $('resetImage').onclick = () => {
-      state.imageState = {rotation:0,flip:false,gray:false,brightness:100};
-      $('brightnessRange').value='100';
-      render();
-    };
-
-    render();
-
-    const canSaveImage = ['jpg','jpeg','png','webp'].includes(ext);
-
-    if (canSaveImage) {
-      addModalAction('Guardar cambios', true, async () => {
-        const buttons = editorActions.querySelectorAll('button');
-        buttons.forEach(b=>b.disabled=true);
-
-        try {
-          const mime = ext === 'jpg' || ext === 'jpeg'
-            ? 'image/jpeg'
-            : ext === 'webp' ? 'image/webp' : 'image/png';
-
-          const blob = await new Promise((resolve,reject) =>
-            canvas.toBlob(
-              b => b ? resolve(b) : reject(new Error('El navegador no pudo exportar esta imagen.')),
-              mime,
-              .94
-            )
-          );
-
-          await saveBlobToCloud(file, blob, file.name);
-          setEditorStatus('Cambios guardados.', 'success');
-          toast('Imagen guardada en Smart-Cloud.', 'success');
-
-        } catch(error) {
-          setEditorStatus(error.message,'error');
-          toast(error.message,'error');
-
-        } finally {
-          buttons.forEach(b=>b.disabled=false);
-        }
-      });
-
-    } else {
-      setEditorStatus('Puedes ver esta imagen, pero guardar ediciones desde el navegador solo está habilitado para JPG, PNG y WEBP.', 'error');
-    }
-  }
-
-  async function openPdfEditor(file) {
-    const url = await getPreviewUrl(file);
-    state.previewUrl = url;
-
-    const iframe = document.createElement('iframe');
-    iframe.className = 'preview-frame';
-    iframe.title = `Vista previa de ${file.name}`;
-    iframe.src = url;
-
-    editorBody.innerHTML = '';
-    editorBody.appendChild(iframe);
-
-    const label = document.createElement('div');
-    label.className='note';
-    label.style.margin='12px 0 7px';
-    label.textContent='Añadir una nota a la primera página del PDF:';
-
-    const textarea = document.createElement('textarea');
-    textarea.className='editor-note';
-    textarea.maxLength=1200;
-    textarea.placeholder='Escribe una nota…';
-
-    editorBody.append(label, textarea);
-
-    addModalAction('Guardar PDF', true, async () => {
-      if (!textarea.value.trim()) {
-        setEditorStatus('Escribe una nota antes de guardar.');
-        return;
-      }
-
-      const buttons = editorActions.querySelectorAll('button');
-      buttons.forEach(b=>b.disabled=true);
-
-      try {
-        await loadPdfLib();
-        setEditorStatus('Aplicando nota al PDF…');
-
-        const blob = await getFileBlob(file);
-        const pdf = await PDFLib.PDFDocument.load(await blob.arrayBuffer());
-        const page = pdf.getPages()[0];
-
-        if (!page) throw new Error('El PDF no contiene páginas.');
-
-        const font = await pdf.embedFont(PDFLib.StandardFonts.Helvetica);
-        const size = 12;
-        const lines = textarea.value.trim().split(/\r?\n/).slice(0,12);
-        const pageHeight = page.getHeight();
-
-        lines.forEach((line, index) => {
-          page.drawText(line.slice(0,140), {
-            x:36,
-            y:Math.max(24,pageHeight-48-index*(size+4)),
-            size,
-            font,
-            color:PDFLib.rgb(0,0.55,0.65),
-            maxWidth:page.getWidth()-72
-          });
-        });
-
-        const bytes = await pdf.save();
-
-        await saveBlobToCloud(
-          file,
-          new Blob([bytes], {type:'application/pdf'}),
-          file.name
-        );
-
-        setEditorStatus('PDF guardado con la nota.', 'success');
-        toast('PDF actualizado en Smart-Cloud.', 'success');
-        iframe.src = await getPreviewUrl(file);
-
-      } catch(error) {
-        setEditorStatus(error.message || 'No se pudo editar el PDF.','error');
-        toast(error.message,'error');
-
-      } finally {
-        buttons.forEach(b=>b.disabled=false);
-      }
-    });
-
-    setEditorStatus('La edición añade texto a la primera página; no reemplaza el texto original del PDF.');
-  }
-
-  async function loadPdfLib() {
-    if (window.PDFLib) return;
-    if (state.pdfLibLoading) return state.pdfLibLoading;
-
-    state.pdfLibLoading = new Promise((resolve,reject) => {
-      const script = document.createElement('script');
-      script.src = 'https://cdn.jsdelivr.net/npm/pdf-lib@1.17.1/dist/pdf-lib.min.js';
-      script.onload = () => window.PDFLib
-        ? resolve()
-        : reject(new Error('No se pudo cargar el editor PDF.'));
-      script.onerror = () => reject(new Error('No se pudo descargar la librería PDF desde el CDN.'));
-
-      document.head.appendChild(script);
-    });
-
-    return state.pdfLibLoading;
-  }
-
-  async function openVideoEditor(file, ext) {
-    const url = await getPreviewUrl(file);
-    state.previewUrl = url;
-
-    editorBody.innerHTML = `
-      <video id="videoPreview" class="video-preview" controls playsinline></video>
-      <div class="trim-grid">
-        <label>Inicio (segundos)<input id="trimStart" type="number" min="0" value="0" step="0.1"></label>
-        <label>Fin (segundos)<input id="trimEnd" type="number" min="0" value="0" step="0.1"></label>
-      </div>
-      <div class="note" style="margin-top:10px">Recorte básico en el navegador. Para editar vídeo, el archivo debe pesar como máximo 250 MB y el navegador descargará FFmpeg WebAssembly al iniciar el recorte.</div>`;
-
-    const video = $('videoPreview');
-    video.src = url;
-
-    await new Promise(resolve => {
-      if (video.readyState >= 1) resolve();
-      else {
-        video.onloadedmetadata=resolve;
-        video.onerror=resolve;
-      }
-    });
-
-    $('trimEnd').value = Number.isFinite(video.duration) ? video.duration.toFixed(2) : '0';
-
-    addModalAction('Recortar y guardar', true, async () => {
-      const start = Number($('trimStart').value);
-      const end = Number($('trimEnd').value);
-
-      if (!Number.isFinite(start) || !Number.isFinite(end) || start < 0 || end <= start) {
-        setEditorStatus('Introduce un inicio y un fin válidos.','error');
-        return;
-      }
-
-      if (Number(file.size_bytes) > MAX_BROWSER_VIDEO_EDIT_BYTES) {
-        setEditorStatus('Este vídeo pesa más de 250 MB. Para evitar quedarte sin memoria, usa un editor especializado para archivos grandes.','error');
-        return;
-      }
-
-      const buttons = editorActions.querySelectorAll('button');
-      buttons.forEach(b=>b.disabled=true);
-
-      try {
-        const sourceBlob = await getFileBlob(file);
-        await trimVideoInBrowser(file, sourceBlob, start, end);
-
-        setEditorStatus('Vídeo recortado y guardado.', 'success');
-        toast('Vídeo actualizado en Smart-Cloud.', 'success');
-
-        const refreshedUrl = await getPreviewUrl(file);
-        video.src = refreshedUrl;
-        video.load();
-
-      } catch(error) {
-        setEditorStatus(error.message || 'No se pudo recortar el vídeo.','error');
-        toast(error.message,'error');
-
-      } finally {
-        buttons.forEach(b=>b.disabled=false);
-      }
-    });
-  }
-
-  async function trimVideoInBrowser(file, blob, start, end) {
-    setEditorStatus('Cargando editor de vídeo. La primera carga puede ser grande…');
-
-    const {FFmpeg} = await import('https://cdn.jsdelivr.net/npm/@ffmpeg/ffmpeg@0.12.10/dist/esm/index.js');
-    const {fetchFile, toBlobURL} = await import('https://cdn.jsdelivr.net/npm/@ffmpeg/util@0.12.2/dist/esm/index.js');
-
-    if (!state.ffmpeg) {
-      state.ffmpeg = new FFmpeg();
-
-      state.ffmpeg.on('log', ({message}) => {
-        if (/error/i.test(message)) setEditorStatus(message.slice(0,220));
-      });
-
-      const baseURL = 'https://cdn.jsdelivr.net/npm/@ffmpeg/core@0.12.10/dist/umd';
-
-      await state.ffmpeg.load({
-        coreURL: await toBlobURL(`${baseURL}/ffmpeg-core.js`, 'text/javascript'),
-        wasmURL: await toBlobURL(`${baseURL}/ffmpeg-core.wasm`, 'application/wasm')
-      });
-    }
-
-    const ffmpeg = state.ffmpeg;
-    const ext = extension(file.name).replace(/[^a-z0-9]/g,'') || 'mp4';
-    const inputName = `input.${ext}`;
-    const outputName = `output.${ext}`;
-
-    setEditorStatus('Procesando recorte…');
-
-    await ffmpeg.writeFile(inputName, await fetchFile(blob));
-    await ffmpeg.exec(['-ss', String(start), '-i', inputName, '-t', String(end-start), '-c', 'copy', outputName]);
-
-    const result = await ffmpeg.readFile(outputName);
-    const outBlob = new Blob([result], {type:file.content_type || 'application/octet-stream'});
-
-    if (!outBlob.size) {
-      throw new Error('FFmpeg generó un archivo vacío. Prueba otros puntos de inicio y fin.');
-    }
-
-    await saveBlobToCloud(file, outBlob, file.name);
-
-    try {
-      await ffmpeg.deleteFile(inputName);
-      await ffmpeg.deleteFile(outputName);
-    } catch (_) {}
-  }
-
-  async function openTextEditor(file) {
-    const blob = await getFileBlob(file);
-    const text = await blob.text();
-
-    editorBody.innerHTML = '';
-
-    const textarea = document.createElement('textarea');
-    textarea.className = 'text-editor';
-    textarea.value = text;
-
-    editorBody.appendChild(textarea);
-
-    addModalAction('Guardar cambios', true, async () => {
-      const buttons = editorActions.querySelectorAll('button');
-      buttons.forEach(b=>b.disabled=true);
-
-      try {
-        await saveBlobToCloud(
-          file,
-          new Blob([textarea.value], {type:file.content_type || 'text/plain;charset=utf-8'}),
-          file.name
-        );
-
-        setEditorStatus('Cambios guardados.', 'success');
-        toast('Archivo actualizado.', 'success');
-
-      } catch(error) {
-        setEditorStatus(error.message,'error');
-
-      } finally {
-        buttons.forEach(b=>b.disabled=false);
-      }
-    });
-  }
-
-  async function openAudioPreview(file) {
-    const url = await getPreviewUrl(file);
-    state.previewUrl = url;
-
-    editorBody.innerHTML = '';
-
-    const audio = document.createElement('audio');
-    audio.controls = true;
-    audio.src = url;
-    audio.style.width = '100%';
-    editorBody.appendChild(audio);
-
-    const note = document.createElement('div');
-    note.className='note';
-    note.style.marginTop='12px';
-    note.textContent='Este formato se puede reproducir, pero el editor de audio no está incluido.';
-    editorBody.appendChild(note);
-  }
-
-  async function openGenericPreview(file) {
-    editorBody.innerHTML = '';
-
-    const note = document.createElement('div');
-    note.className='empty-files';
-    note.textContent = `La vista previa o edición en navegador no está disponible para .${extension(file.name) || 'archivo'}. Puedes guardarlo en tu dispositivo con el botón Descargar.`;
-
-    editorBody.appendChild(note);
-  }
-
-  async function signOut() {
-    if (state.token) {
-      try {
-        await fetch(`${ACCOUNT}/api/logout`, {
-          method:'POST',
-          headers:{Authorization:`Smart-Token ${state.token}`}
-        });
-      } catch (_) {}
-    }
-
-    localStorage.removeItem(TOKEN_KEY);
-    state.token = null;
-    state.username = '';
-
-    goToAuth('login');
-  }
-
-  // Eventos de la interfaz.
-  $('loginBtn').addEventListener('click', () => goToAuth('login'));
-  $('registerBtn').addEventListener('click', () => goToAuth('register'));
-  $('signOutBtn').addEventListener('click', signOut);
-  $('uploadBtn').addEventListener('click', () => $('fileInput').click());
-  $('fileInput').addEventListener('change', event => uploadFiles(event.target.files));
-
-  $('sortSelect').addEventListener('change', event => {
-    state.sort = event.target.value;
-    state.offset = 0;
-    loadFiles();
-  });
-
-  $('orderSelect').addEventListener('change', event => {
-    state.order = event.target.value;
-    state.offset = 0;
-    loadFiles();
-  });
-
-  $('searchInput').addEventListener('input', debounce(event => {
-    state.search = event.target.value.trim();
-    state.offset = 0;
-    loadFiles();
-  }, 300));
-
-  document.querySelectorAll('.category[data-category]').forEach(button => {
-    button.addEventListener('click', () => {
-      state.category = button.dataset.category;
-      state.offset = 0;
-
-      document.querySelectorAll('.category').forEach(item => {
-        item.classList.toggle('active', item === button);
-      });
-
-      loadFiles();
-    });
-  });
-
-  $('prevBtn').addEventListener('click', () => {
-    state.offset = Math.max(0, state.offset - PAGE_SIZE);
-    loadFiles();
-  });
-
-  $('nextBtn').addEventListener('click', () => {
-    if (state.offset + PAGE_SIZE < state.total) {
-      state.offset += PAGE_SIZE;
-      loadFiles();
-    }
-  });
-
-  $('closeEditorBtn').addEventListener('click', closeEditor);
-
-  editorModal.addEventListener('click', event => {
-    if (event.target === editorModal) closeEditor();
-  });
-
-  document.addEventListener('keydown', event => {
-    if (event.key === 'Escape' && editorModal.classList.contains('open')) closeEditor();
-  });
-
-  function debounce(fn, delay) {
-    let timer;
-
-    return (...args) => {
-      clearTimeout(timer);
-      timer = setTimeout(() => fn(...args), delay);
-    };
-  }
-
-  boot();
+'use strict';
+if(typeof URLS==='undefined'||!URLS||!URLS.cloud||!URLS.account||!URLS.auth)throw new Error('Faltan URLS.cloud, URLS.account o URLS.auth en url.js.');
+const CLOUD=URLS.cloud.replace(/\/+$/,''), ACCOUNT=URLS.account.replace(/\/+$/,''), AUTH_URL=URLS.auth;
+const KEYS=['smart_token','smart_account_token','knfoundation_token'];
+const PAGE_SIZE=100, MAX_VIDEO=250*1024*1024;
+const S={token:null,username:'',category:'all',sort:'created',order:'desc',search:'',offset:0,total:0,files:[],quota:1e10,used:0,urls:[],ffmpeg:null,pdfLib:null,req:0};
+const $=id=>document.getElementById(id);
+const fileList=$('fileList'), editorBody=$('editorBody'), editorActions=$('editorActions');
+function el(tag,cls,txt){const e=document.createElement(tag);if(cls)e.className=cls;if(txt!=null)e.textContent=txt;return e}
+
+function toast(m,type){const g=$('globalStatus');g.textContent=m;g.classList.remove('hidden');g.style.borderLeftColor=type==='error'?'var(--red)':type==='success'?'var(--green)':'var(--cyan)';clearTimeout(toast.t);toast.t=setTimeout(()=>g.classList.add('hidden'),4500)}
+function setAuthStatus(m,type){$('authStatus').textContent=m||'';$('authStatus').className='status'+(type?' '+type:'')}
+function setEd(m,type){const e=$('editorStatus');e.textContent=m||'';e.style.color=type==='error'?'var(--red)':type==='success'?'var(--green)':'var(--muted)'}
+
+/* ---- Smart-Token: acepta cualquiera de las claves usadas por las apps Smart ---- */
+function readToken(){for(const k of KEYS){const v=(localStorage.getItem(k)||'').replace(/^"|"$/g,'').trim();if(v)return v}return null}
+function clearToken(){KEYS.forEach(k=>localStorage.removeItem(k));S.token=null}
+function authDest(mode){const cb=new URL(location.href);cb.searchParams.set('smart_cloud_return','1');const d=new URL(AUTH_URL);d.searchParams.set('redirect',cb.toString());d.searchParams.set('mode',mode);return d.toString()}
+function goToAuth(mode='login'){sessionStorage.setItem('smart_cloud_auth_redirecting','1');location.assign(authDest(mode))}
+function showAuthGate(m){$('cloudMain').classList.add('hidden');$('authGate').classList.remove('hidden');$('signOutBtn').classList.add('hidden');$('userLabel').textContent='';setAuthStatus(m||'',m?'error':'')}
+
+async function api(path,opt={}){
+ const h=new Headers(opt.headers||{});h.set('Authorization','Smart-Token '+S.token);
+ const r=await fetch(CLOUD+path,{...opt,headers:h,cache:opt.cache||'no-store'});
+ if(r.status===401){clearToken();throw new Error('La sesión de Smart-Account expiró. Inicia sesión de nuevo.')}
+ let data=null;if((r.headers.get('content-type')||'').includes('application/json'))data=await r.json().catch(()=>({}));
+ if(!r.ok)throw new Error((data&&(data.detail||data.message))||'Smart-Cloud respondió HTTP '+r.status+'.');
+ return{response:r,data}}
+
+async function boot(){
+ const found=readToken();
+ if(!found){
+  const back=new URLSearchParams(location.search).has('smart_cloud_return'),was=sessionStorage.getItem('smart_cloud_auth_redirecting')==='1';
+  if(back&&was){sessionStorage.removeItem('smart_cloud_auth_redirecting');showAuthGate('No se encontró un Smart-Token. Inicia sesión para continuar.');return}
+  goToAuth('login');return}
+ S.token=found;
+ try{const {data}=await api('/api/storage');S.username=data.username||'';$('userLabel').textContent=S.username?'@'+S.username:'';
+  $('signOutBtn').classList.remove('hidden');$('authGate').classList.add('hidden');$('cloudMain').classList.remove('hidden');
+  sessionStorage.removeItem('smart_cloud_auth_redirecting');renderStorage(data);await loadFiles()}
+ catch(e){if(!S.token){goToAuth('login');return}showAuthGate(e.message||'No se pudo conectar con Smart-Cloud.')}}
+
+function fmtBytes(b){const n=Math.max(0,Number(b)||0);if(n<1024)return n+' B';const u=['KB','MB','GB','TB'];let v=n/1024,i=0;while(v>=1024&&i<3){v/=1024;i++}return v.toFixed(v>=10?1:2)+' '+u[i]}
+const fmtDate=s=>{if(!s)return'—';const d=new Date(Number(s)*1000);return isNaN(d)?'—':d.toLocaleString()};
+function renderStorage(st={}){
+ const used=Number(st.used_bytes??S.used)||0,quota=Number(st.quota_bytes??S.quota)||1e10,pct=Math.min(100,used/quota*100);S.used=used;S.quota=quota;
+ $('storageNumbers').textContent=fmtBytes(used)+' / '+fmtBytes(quota);$('storageFill').style.width=pct+'%';$('storageFill').style.background=pct>=95?'var(--red)':'var(--cyan)';
+ $('storageHint').textContent=pct.toFixed(1)+'% usado · '+fmtBytes(Math.max(0,quota-used))+' disponibles'}
+
+async function loadFiles(){
+ const id=++S.req;$('fileCount').textContent='Cargando…';$('listStatus').textContent='';
+ try{const p=new URLSearchParams({category:S.category,sort:S.sort,order:S.order,search:S.search,limit:PAGE_SIZE,offset:S.offset});
+  const {data}=await api('/api/files?'+p);if(id!==S.req)return;
+  S.files=Array.isArray(data.files)?data.files:[];S.total=Number(data.total)||0;if(data.storage)renderStorage(data.storage);
+  renderFiles();$('fileCount').textContent=S.total+' archivo'+(S.total===1?'':'s');
+  $('pageInfo').textContent='Página '+(Math.floor(S.offset/PAGE_SIZE)+1);$('prevBtn').disabled=S.offset<=0;$('nextBtn').disabled=S.offset+PAGE_SIZE>=S.total;updateCounts()}
+ catch(e){$('fileCount').textContent='No se pudieron cargar los archivos';fileList.replaceChildren(el('div','empty-files',e.message));if(!S.token)showAuthGate(e.message)}}
+async function updateCounts(){
+ await Promise.all(['all','images','videos','pdfs','documents','audio','other'].map(async c=>{
+  try{const {data}=await api('/api/files?'+new URLSearchParams({category:c,sort:'created',order:'desc',limit:'1',offset:'0'}));const e=$('count-'+c);if(e)e.textContent=Number(data.total)?String(data.total):''}catch(_){}}))}
+
+const ext=n=>{const i=String(n||'').lastIndexOf('.');return i>=0?n.slice(i+1).toLowerCase():''};
+function iconLabel(f){const e=ext(f.name);return f.category==='videos'?'VIDEO':f.category==='pdfs'?'PDF':f.category==='audio'?'AUDIO':e.toUpperCase().slice(0,4)||(f.category==='images'?'IMG':'FILE')}
+function mkBtn(label,cls,fn){const b=el('button',cls,label);b.type='button';b.onclick=fn;return b}
+function renderFiles(){
+ fileList.replaceChildren();
+ if(!S.files.length){const e=el('div','empty-files'),i=el('div');i.append(el('strong',null,S.search?'Sin resultados':'Tu nube está vacía'),el('div',null,S.search?'Prueba otra búsqueda o categoría.':'Sube el primer archivo para empezar.'));e.appendChild(i);fileList.appendChild(e);return}
+ for(const f of S.files){
+  const row=el('article','file-row'),main=el('div','file-main'),d=el('div');d.style.minWidth='0';
+  const meta=el('div','file-meta');meta.append(el('span',null,fmtBytes(f.size_bytes)),el('span',null,String(f.category||'other')),el('span',null,fmtDate(f.updated_at||f.created_at)));
+  d.append(el('div','file-name',f.name),meta);main.append(el('div','file-icon',iconLabel(f)),d);
+  const a=el('div','file-actions');a.append(mkBtn('Abrir / editar','btn small primary',()=>openEditor(f)),mkBtn('Descargar','btn small',()=>download(f)),mkBtn('Eliminar','btn small danger',()=>remove(f)));
+  row.append(main,a);fileList.appendChild(row)}}
+
+/* ---- subir / descargar / eliminar ---- */
+function xhrUpload(file){return new Promise((ok,no)=>{const x=new XMLHttpRequest();x.open('POST',CLOUD+'/api/files/upload');x.setRequestHeader('Authorization','Smart-Token '+S.token);
+ x.upload.onprogress=e=>{if(e.lengthComputable)$('listStatus').textContent='Subiendo '+file.name+' · '+Math.round(e.loaded/e.total*100)+'%'};
+ x.onload=()=>{let d={};try{d=JSON.parse(x.responseText||'{}')}catch(_){}x.status>=200&&x.status<300?ok(d):no(new Error(d.detail||'La subida falló (HTTP '+x.status+').'))};
+ x.onerror=()=>no(new Error('No se pudo conectar con Smart-Cloud. Revisa la URL, el túnel y CORS.'));
+ const f=new FormData();f.append('file',file,file.name);x.send(f)})}
+async function uploadFiles(set){
+ const files=[...(set||[])];
+ for(let i=0;i<files.length;i++){$('listStatus').textContent='Subiendo '+(i+1)+'/'+files.length+': '+files[i].name;
+  try{await xhrUpload(files[i]);toast('Subido: '+files[i].name,'success')}catch(e){toast(files[i].name+': '+e.message,'error')}}
+ $('listStatus').textContent='';$('fileInput').value='';await loadFiles()}
+async function remove(f){if(!confirm('¿Eliminar “'+f.name+'” permanentemente?'))return;
+ try{await api('/api/files/'+encodeURIComponent(f.id),{method:'DELETE'});toast('Archivo eliminado.','success');await loadFiles()}catch(e){toast(e.message,'error')}}
+async function download(f){
+ try{toast('Preparando '+f.name+'…');const {response}=await api('/api/files/'+encodeURIComponent(f.id)+'/content?download=true'),u=URL.createObjectURL(await response.blob()),a=document.createElement('a');
+  a.href=u;a.download=f.name;document.body.appendChild(a);a.click();a.remove();setTimeout(()=>URL.revokeObjectURL(u),30000)}catch(e){toast(e.message,'error')}}
+async function previewUrl(f){const {data}=await api('/api/files/'+encodeURIComponent(f.id)+'/preview-ticket',{method:'POST'});return new URL(data.preview_url,CLOUD+'/').toString()}
+async function fileBlob(f){const {response}=await api('/api/files/'+encodeURIComponent(f.id)+'/content');return response.blob()}
+async function saveBlob(f,blob,name=f.name){
+ const fd=new FormData();fd.append('file',blob,name);const {data}=await api('/api/files/'+encodeURIComponent(f.id)+'/content',{method:'PUT',body:fd});
+ if(data&&data.used_bytes!=null)S.used=Number(data.used_bytes);await loadFiles();return data}
+
+/* ---- editor ---- */
+function addAction(label,primary,fn){const b=el('button','btn'+(primary?' primary':''),label);b.onclick=fn;editorActions.appendChild(b);return b}
+function cleanup(){S.urls.forEach(u=>URL.revokeObjectURL(u));S.urls=[];editorBody.replaceChildren();editorActions.replaceChildren();setEd('')}
+function closeEditor(){$('editorModal').classList.remove('open');cleanup()}
+async function withLock(fn){const bs=[...editorActions.querySelectorAll('button')];bs.forEach(b=>b.disabled=true);try{await fn()}finally{bs.forEach(b=>b.disabled=false)}}
+async function openEditor(f){
+ cleanup();$('editorTitle').textContent=f.name;$('editorModal').classList.add('open');editorBody.appendChild(el('div','empty-files','Preparando archivo…'));
+ try{const e=ext(f.name);
+  if(f.category==='images')return await edImage(f,e);
+  if(f.category==='videos')return await edVideo(f);
+  if(f.category==='pdfs'||e==='pdf')return await edPdf(f);
+  if(['txt','md','csv','json','xml'].includes(e))return await edText(f);
+  if(f.category==='audio')return await edAudio(f);
+  editorBody.replaceChildren(el('div','empty-files','La vista previa o edición no está disponible para .'+(e||'archivo')+'. Usa Descargar.'))}
+ catch(e){editorBody.replaceChildren(el('div','empty-files',e.message||'No se pudo abrir este archivo.'));setEd(e.message,'error')}}
+
+async function edImage(f,e){
+ const url=await previewUrl(f);
+ editorBody.innerHTML='<div class="canvas-wrap"><canvas id="imageCanvas"></canvas></div><div class="editor-tools"><button id="rotL" class="btn small">↶ Girar</button><button id="rotR" class="btn small">↷ Girar</button><button id="flip" class="btn small">Voltear</button><button id="gray" class="btn small">Blanco y negro</button><label>Brillo <input id="bri" class="range" type="range" min="40" max="160" value="100"></label><button id="reset" class="btn small">Restablecer</button></div><div class="note" style="margin-top:10px">Los cambios se guardan en el archivo de la nube. Los GIF animados pueden convertirse en una imagen fija.</div>';
+ const img=new Image();img.crossOrigin='anonymous';img.src=url;
+ await new Promise((ok,no)=>{img.onload=ok;img.onerror=()=>no(new Error('No se pudo cargar la imagen. Comprueba CORS del API de Smart-Cloud.'))});
+ let s={rot:0,flip:false,gray:false,bri:100};const cv=$('imageCanvas');
+ const draw=()=>{const side=s.rot%180!==0;cv.width=side?img.naturalHeight:img.naturalWidth;cv.height=side?img.naturalWidth:img.naturalHeight;const c=cv.getContext('2d');c.save();c.translate(cv.width/2,cv.height/2);c.rotate(s.rot*Math.PI/180);c.scale(s.flip?-1:1,1);c.filter='grayscale('+(s.gray?1:0)+') brightness('+s.bri+'%)';c.drawImage(img,-img.naturalWidth/2,-img.naturalHeight/2);c.restore()};
+ $('rotL').onclick=()=>{s.rot=(s.rot+270)%360;draw()};$('rotR').onclick=()=>{s.rot=(s.rot+90)%360;draw()};$('flip').onclick=()=>{s.flip=!s.flip;draw()};$('gray').onclick=()=>{s.gray=!s.gray;draw()};
+ $('bri').oninput=ev=>{s.bri=Number(ev.target.value);draw()};$('reset').onclick=()=>{s={rot:0,flip:false,gray:false,bri:100};$('bri').value='100';draw()};draw();
+ if(['jpg','jpeg','png','webp'].includes(e)){
+  addAction('Guardar cambios',true,()=>withLock(async()=>{try{const mime=e==='png'?'image/png':e==='webp'?'image/webp':'image/jpeg';
+   const blob=await new Promise((ok,no)=>cv.toBlob(b=>b?ok(b):no(new Error('El navegador no pudo exportar esta imagen.')),mime,.94));
+   await saveBlob(f,blob);setEd('Cambios guardados.','success');toast('Imagen guardada en Smart-Cloud.','success')}catch(x){setEd(x.message,'error');toast(x.message,'error')}}))}
+ else setEd('Puedes ver esta imagen, pero guardar ediciones solo está habilitado para JPG, PNG y WEBP.','error')}
+
+async function loadPdfLib(){
+ if(window.PDFLib)return;
+ if(!S.pdfLib)S.pdfLib=new Promise((ok,no)=>{const s=document.createElement('script');s.src='https://cdn.jsdelivr.net/npm/pdf-lib@1.17.1/dist/pdf-lib.min.js';s.onload=()=>window.PDFLib?ok():no(new Error('No se pudo cargar el editor PDF.'));s.onerror=()=>no(new Error('No se pudo descargar la librería PDF desde el CDN.'));document.head.appendChild(s)});
+ return S.pdfLib}
+async function edPdf(f){
+ const fr=el('iframe','preview-frame');fr.title='Vista previa de '+f.name;fr.src=await previewUrl(f);
+ const lab=el('div','note','Añadir una nota a la primera página del PDF:');lab.style.margin='12px 0 7px';
+ const ta=el('textarea','editor-note');ta.maxLength=1200;ta.placeholder='Escribe una nota…';editorBody.replaceChildren(fr,lab,ta);
+ addAction('Guardar PDF',true,()=>withLock(async()=>{
+  if(!ta.value.trim()){setEd('Escribe una nota antes de guardar.');return}
+  try{await loadPdfLib();setEd('Aplicando nota al PDF…');
+   const pdf=await PDFLib.PDFDocument.load(await (await fileBlob(f)).arrayBuffer()),page=pdf.getPages()[0];if(!page)throw new Error('El PDF no contiene páginas.');
+   const font=await pdf.embedFont(PDFLib.StandardFonts.Helvetica),H=page.getHeight();
+   ta.value.trim().split(/\r?\n/).slice(0,12).forEach((l,i)=>page.drawText(l.slice(0,140),{x:36,y:Math.max(24,H-48-i*16),size:12,font,color:PDFLib.rgb(0,.55,.65),maxWidth:page.getWidth()-72}));
+   await saveBlob(f,new Blob([await pdf.save()],{type:'application/pdf'}));setEd('PDF guardado con la nota.','success');toast('PDF actualizado en Smart-Cloud.','success');fr.src=await previewUrl(f)}
+  catch(x){setEd(x.message||'No se pudo editar el PDF.','error');toast(x.message,'error')}}));
+ setEd('La edición añade texto a la primera página; no reemplaza el texto original del PDF.')}
+
+async function edVideo(f){
+ const url=await previewUrl(f);
+ editorBody.innerHTML='<video id="vp" class="video-preview" controls playsinline></video><div class="trim-grid"><label>Inicio (segundos)<input id="ts" type="number" min="0" value="0" step="0.1"></label><label>Fin (segundos)<input id="te" type="number" min="0" value="0" step="0.1"></label></div><div class="note" style="margin-top:10px">Recorte básico en el navegador (máximo 250 MB). Se descargará FFmpeg WebAssembly al iniciar el recorte.</div>';
+ const v=$('vp');v.src=url;await new Promise(ok=>{if(v.readyState>=1)ok();else{v.onloadedmetadata=ok;v.onerror=ok}});
+ $('te').value=Number.isFinite(v.duration)?v.duration.toFixed(2):'0';
+ addAction('Recortar y guardar',true,()=>withLock(async()=>{
+  const a=Number($('ts').value),z=Number($('te').value);
+  if(!isFinite(a)||!isFinite(z)||a<0||z<=a){setEd('Introduce un inicio y un fin válidos.','error');return}
+  if(Number(f.size_bytes)>MAX_VIDEO){setEd('Este vídeo pesa más de 250 MB; usa un editor especializado.','error');return}
+  try{await trim(f,await fileBlob(f),a,z);setEd('Vídeo recortado y guardado.','success');toast('Vídeo actualizado en Smart-Cloud.','success');v.src=await previewUrl(f);v.load()}
+  catch(x){setEd(x.message||'No se pudo recortar el vídeo.','error');toast(x.message,'error')}}))}
+async function trim(f,blob,a,z){
+ setEd('Cargando editor de vídeo. La primera carga puede ser grande…');
+ const {FFmpeg}=await import('https://cdn.jsdelivr.net/npm/@ffmpeg/ffmpeg@0.12.10/dist/esm/index.js'),{fetchFile,toBlobURL}=await import('https://cdn.jsdelivr.net/npm/@ffmpeg/util@0.12.2/dist/esm/index.js');
+ if(!S.ffmpeg){S.ffmpeg=new FFmpeg();const base='https://cdn.jsdelivr.net/npm/@ffmpeg/core@0.12.10/dist/umd';
+  await S.ffmpeg.load({coreURL:await toBlobURL(base+'/ffmpeg-core.js','text/javascript'),wasmURL:await toBlobURL(base+'/ffmpeg-core.wasm','application/wasm')})}
+ const ff=S.ffmpeg,e=ext(f.name).replace(/[^a-z0-9]/g,'')||'mp4',inp='input.'+e,out='output.'+e;setEd('Procesando recorte…');
+ await ff.writeFile(inp,await fetchFile(blob));await ff.exec(['-ss',String(a),'-i',inp,'-t',String(z-a),'-c','copy',out]);
+ const r=await ff.readFile(out),ob=new Blob([r],{type:f.content_type||'application/octet-stream'});
+ if(!ob.size)throw new Error('FFmpeg generó un archivo vacío. Prueba otros puntos de inicio y fin.');
+ await saveBlob(f,ob);try{await ff.deleteFile(inp);await ff.deleteFile(out)}catch(_){}}
+
+async function edText(f){
+ const ta=el('textarea','text-editor');ta.value=await (await fileBlob(f)).text();editorBody.replaceChildren(ta);
+ addAction('Guardar cambios',true,()=>withLock(async()=>{try{await saveBlob(f,new Blob([ta.value],{type:f.content_type||'text/plain;charset=utf-8'}));setEd('Cambios guardados.','success');toast('Archivo actualizado.','success')}catch(x){setEd(x.message,'error')}}))}
+async function edAudio(f){
+ const a=el('audio');a.controls=true;a.src=await previewUrl(f);a.style.width='100%';const n=el('div','note','Este formato se puede reproducir, pero el editor de audio no está incluido.');n.style.marginTop='12px';editorBody.replaceChildren(a,n)}
+
+async function signOut(){
+ if(S.token){try{await fetch(ACCOUNT+'/api/logout',{method:'POST',headers:{Authorization:'Smart-Token '+S.token}})}catch(_){}}
+ clearToken();S.username='';goToAuth('login')}
+
+$('loginBtn').onclick=()=>goToAuth('login');$('registerBtn').onclick=()=>goToAuth('register');$('signOutBtn').onclick=signOut;
+$('uploadBtn').onclick=()=>$('fileInput').click();$('fileInput').onchange=e=>uploadFiles(e.target.files);
+$('sortSelect').onchange=e=>{S.sort=e.target.value;S.offset=0;loadFiles()};$('orderSelect').onchange=e=>{S.order=e.target.value;S.offset=0;loadFiles()};
+let st;$('searchInput').oninput=e=>{clearTimeout(st);st=setTimeout(()=>{S.search=e.target.value.trim();S.offset=0;loadFiles()},300)};
+document.querySelectorAll('.category[data-category]').forEach(b=>b.onclick=()=>{S.category=b.dataset.category;S.offset=0;document.querySelectorAll('.category').forEach(i=>i.classList.toggle('active',i===b));loadFiles()});
+$('prevBtn').onclick=()=>{S.offset=Math.max(0,S.offset-PAGE_SIZE);loadFiles()};$('nextBtn').onclick=()=>{if(S.offset+PAGE_SIZE<S.total){S.offset+=PAGE_SIZE;loadFiles()}};
+$('closeEditorBtn').onclick=closeEditor;$('editorModal').onclick=e=>{if(e.target===$('editorModal'))closeEditor()};
+document.addEventListener('keydown',e=>{if(e.key==='Escape'&&$('editorModal').classList.contains('open'))closeEditor()});
+boot();
 })();
 </script>
 </body>

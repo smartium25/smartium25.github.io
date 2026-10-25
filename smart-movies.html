@@ -5,6 +5,11 @@
 <meta name="viewport" content="width=device-width,initial-scale=1.0">
 <meta name="referrer" content="strict-origin-when-cross-origin">
 <title>Smart-Movies</title>
+<script src="./url.js"></script>
+<script>
+/* Expone URLS en window y recoge/sincroniza el Smart-Token (URL o almacenamiento) */
+(function(){try{window.URLS=URLS;var u=new URL(location.href),h=new URLSearchParams(u.hash.slice(1)),K=['smart_token','smart_account_token','knfoundation_token'],t=u.searchParams.get('token')||h.get('token');for(var i=0;!t&&i<K.length;i++)t=localStorage.getItem(K[i]);if(t){t=String(t).replace(/^"|"$/g,'').trim();K.forEach(function(k){localStorage.setItem(k,t)})}if(u.searchParams.has('token')||h.has('token')){u.searchParams.delete('token');h.delete('token');u.hash=h.toString();history.replaceState(null,'',u.pathname+u.search+u.hash)}}catch(e){}})();
+</script>
 <style>
 :root{--bg:#121212;--surface:#1b1b1b;--card:#202020;--cyan:#00bcd4;--cyan2:#00e5ff;--muted:#aaa;--border:#333;--shadow:0 10px 30px rgba(0,0,0,.4)}
 *{box-sizing:border-box}html{scroll-behavior:smooth}html,body{margin:0;background:var(--bg);color:#fff;font-family:Segoe UI,Roboto,Arial,sans-serif}body{overflow-x:hidden}button,input{font:inherit;color:inherit}button{cursor:pointer}:focus-visible{outline:2px solid var(--cyan2);outline-offset:3px}
@@ -43,13 +48,11 @@
     </div>
     <div class="hero-dots" id="heroDots" aria-label="Seleccionar banner"></div>
    </section>
-   <section class="about">
-    <div class="about-inner">
-     <div class="eyebrow">Tu entretenimiento, en un solo lugar</div>
-     <h2>¿Qué es Smart-Movies?</h2>
-     <p><strong>Smart-Movies</strong> es tu espacio para descubrir películas y seguir tus series favoritas. Explora el catálogo, entra en cada serie para encontrar sus episodios y reproduce tus vídeos directamente desde la plataforma, con una interfaz diseñada para que todo esté organizado y sea fácil de encontrar.</p>
-    </div>
-   </section>
+   <section class="about"><div class="about-inner">
+    <div class="eyebrow">Tu entretenimiento, en un solo lugar</div>
+    <h2>¿Qué es Smart-Movies?</h2>
+    <p><strong>Smart-Movies</strong> es tu espacio para descubrir películas y seguir tus series favoritas. Explora el catálogo, entra en cada serie para encontrar sus episodios y reproduce tus vídeos directamente desde la plataforma, con una interfaz diseñada para que todo esté organizado y sea fácil de encontrar.</p>
+   </div></section>
   </section>
   <section id="catalogPage" class="page">
    <div class="page-heading"><h1>Series y películas</h1><p>Las series aparecen agrupadas como carpetas. Abre una para ver sus episodios.</p></div>
@@ -78,50 +81,115 @@
 <div class="modal" id="detailModal"><div class="detail" role="dialog" aria-modal="true" aria-labelledby="detailTitle"><button class="close" id="closeDetail" aria-label="Cerrar detalles" type="button">×</button><div class="detail-backdrop"><video id="detailVideo" muted loop playsinline preload="metadata"></video></div><div class="detail-body"><h2 class="detail-title" id="detailTitle"></h2><div class="tags"><span class="tag" id="detailType"></span><span class="tag" id="detailDuration"></span></div><p class="detail-description" id="detailDescription"></p><div class="actions"><button class="btn btn-primary" id="watchButton" type="button">▶ Ver</button><button class="btn btn-ghost" id="backButton" type="button">Volver</button></div><div class="episodes" id="episodes"><h3>Episodios</h3><div class="ep-list" id="epList"></div></div></div></div></div>
 <div class="modal" id="playerModal"><div class="player"><button class="close" id="closePlayer" aria-label="Cerrar reproductor" type="button">×</button><video id="playerVideo" controls playsinline preload="metadata"></video><h2 class="player-title" id="playerTitle"></h2></div></div>
 <div class="error" id="errorBox" role="status"></div>
-<script src="./url.js"></script>
 <script>
 "use strict";
 const $=id=>document.getElementById(id);
-const API_BASE=String(window.URLS?.movies||"").trim().replace(/\/+$/,"");
-const ACCOUNT_API=String(window.URLS?.account||"").trim().replace(/\/+$/,"");
-const AUTH_PAGE=String(window.URLS?.auth||"https://smartium25.github.io/auth/").trim();
-const TOKEN_KEYS=[window.URLS?.tokenKey,"smart_account_token","smart_token","knfoundation_token"].filter(Boolean);
+/* URLS es una const de url.js: se lee directamente (no existe como window.URLS en todos los casos) */
+const U=(typeof URLS!=="undefined"&&URLS)?URLS:{};
+const pick=(...keys)=>{for(const k of keys){if(U[k])return String(U[k]).trim().replace(/\/+$/,"")}return ""};
+const API_BASE=pick("movies","movie","peliculas","smartmovies");
+const ACCOUNT_API=pick("account");
+const AUTH_PAGE=String(U.auth||"https://smartium25.github.io/auth/").trim();
+const TOKEN_KEYS=[...new Set([U.tokenKey,"smart_token","smart_account_token","knfoundation_token"].filter(Boolean))];
 const PREVIEW_START=60;
 let catalog={series:[],movies:[],banners:[]},homeBanners=[],bannerIndex=0,bannerTimer=null,currentItem=null;
 const loading=$("loading"),app=$("app"),errorBox=$("errorBox"),detailModal=$("detailModal"),detailVideo=$("detailVideo"),playerModal=$("playerModal"),playerVideo=$("playerVideo"),searchInput=$("searchInput");
 const normalize=s=>String(s||"").toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g,"").trim();
-const typeLabel=t=>t==="series"?"Serie":"Película";
-function tokenValue(){for(const key of [...new Set(TOKEN_KEYS)]){try{const value=localStorage.getItem(key);if(value)return value;}catch(e){}}return "";}
-function goAuth(){if(!AUTH_PAGE){failScreen("No se encontró URLS.auth en url.js.");return;}try{const target=new URL(AUTH_PAGE,location.href);target.searchParams.set("redirect",location.href);location.replace(target.href);}catch(e){failScreen("La URL de Smart-Account no es válida. Comprueba url.js.");}}
-function failScreen(message){loading.style.display="flex";loading.replaceChildren();const p=document.createElement("p");p.textContent=message;const b=document.createElement("button");b.textContent="Reintentar";b.onclick=()=>location.reload();loading.append(p,b);}
-function showError(message){errorBox.textContent=message;errorBox.style.display="block";clearTimeout(showError.timer);showError.timer=setTimeout(()=>errorBox.style.display="none",6500);}
-function apiURL(path){if(!API_BASE)throw new Error("Falta URLS.movies en url.js.");return API_BASE+(path.startsWith("/")?path:"/"+path);}
-function assetURL(path){if(!path)return "";return /^https?:\/\//i.test(path)?path:apiURL(path);}
-async function checkAccount(token){if(!ACCOUNT_API)throw new Error("Falta URLS.account en url.js.");const headers={Authorization:"Smart-Token "+token};let response=await fetch(ACCOUNT_API+"/api/me",{headers,cache:"no-store"});if(response.status===401||response.status===403){response=await fetch(ACCOUNT_API+"/api/me",{headers:{Authorization:"Bearer "+token},cache:"no-store"});}if(response.status===401||response.status===403)return false;if(!response.ok)throw new Error("La API de Smart-Account respondió "+response.status+".");return true;}
-async function loadCatalog(token){const response=await fetch(apiURL("/api/catalog"),{headers:{Authorization:"Smart-Token "+token},cache:"no-store"});if(response.status===401||response.status===403)throw Object.assign(new Error("La sesión no es válida o expiró."),{auth:true});if(!response.ok){const data=await response.json().catch(()=>({}));throw new Error(data.detail||"No se pudo cargar el catálogo ("+response.status+").");}return await response.json();}
-function fmtDuration(sec){if(!Number.isFinite(sec)||!sec)return "";const m=Math.round(sec/60);return m>=60?`${Math.floor(m/60)} h ${m%60} min`:`${m} min`;}
-function previewStart(v){return v.duration&&v.duration>PREVIEW_START+2?PREVIEW_START:0.5;}
-function setPreviewSrc(video,source){video.pause();video.removeAttribute("src");video.load();video.src=assetURL(source)+"#t="+PREVIEW_START;video.addEventListener("loadedmetadata",()=>{try{video.currentTime=previewStart(video);}catch(e){}},{once:true});}
-function switchPage(pageId){document.querySelectorAll(".page").forEach(p=>p.classList.toggle("active",p.id===pageId));document.querySelectorAll(".nav button").forEach(b=>b.classList.toggle("active",b.dataset.page===pageId));window.scrollTo({top:0,behavior:"smooth"});if(pageId!=="upcomingPage"){$("trailerVideo").pause();}}
+function tokenValue(){for(const k of TOKEN_KEYS){try{const v=(localStorage.getItem(k)||"").replace(/^"|"$/g,"").trim();if(v)return v}catch(e){}}return ""}
+function clearTokens(){for(const k of TOKEN_KEYS){try{localStorage.removeItem(k)}catch(e){}}}
+function goAuth(){try{const t=new URL(AUTH_PAGE,location.href);t.searchParams.set("redirect",location.origin+location.pathname);location.replace(t.href)}catch(e){failScreen("La URL de Smart-Account (URLS.auth) no es válida: "+AUTH_PAGE)}}
+function failScreen(message){loading.style.display="flex";loading.replaceChildren();const p=document.createElement("p");p.textContent=message;const b=document.createElement("button");b.textContent="Reintentar";b.onclick=()=>location.reload();loading.append(p,b)}
+function showError(message){errorBox.textContent=message;errorBox.style.display="block";clearTimeout(showError.timer);showError.timer=setTimeout(()=>errorBox.style.display="none",6500)}
+function apiURL(path){return API_BASE+(path.startsWith("/")?path:"/"+path)}
+function assetURL(path){if(!path)return "";return /^https?:\/\//i.test(path)?path:apiURL(path)}
+async function checkAccount(token){
+ const get=async scheme=>fetch(ACCOUNT_API+"/api/me",{headers:{Authorization:scheme+" "+token},cache:"no-store"});
+ let r=await get("Smart-Token");if(r.status===401||r.status===403)r=await get("Bearer");
+ if(r.status===401||r.status===403)return false;
+ if(!r.ok)throw new Error("La API de Smart-Account respondió "+r.status+".");return true}
+async function loadCatalog(token){
+ const r=await fetch(apiURL("/api/catalog"),{headers:{Authorization:"Smart-Token "+token},cache:"no-store"});
+ if(r.status===401||r.status===403)throw Object.assign(new Error("La sesión no es válida o expiró."),{auth:true});
+ if(!r.ok){const d=await r.json().catch(()=>({}));throw new Error(d.detail||"No se pudo cargar el catálogo ("+r.status+").")}
+ return await r.json()}
+function fmtDuration(sec){if(!Number.isFinite(sec)||!sec)return "";const m=Math.round(sec/60);return m>=60?`${Math.floor(m/60)} h ${m%60} min`:`${m} min`}
+function previewStart(v){return v.duration&&v.duration>PREVIEW_START+2?PREVIEW_START:0.5}
+function setPreviewSrc(video,source){video.pause();video.removeAttribute("src");video.load();video.src=assetURL(source)+"#t="+PREVIEW_START;video.addEventListener("loadedmetadata",()=>{try{video.currentTime=previewStart(video)}catch(e){}},{once:true})}
+function switchPage(id){document.querySelectorAll(".page").forEach(p=>p.classList.toggle("active",p.id===id));document.querySelectorAll(".nav button").forEach(b=>b.classList.toggle("active",b.dataset.page===id));window.scrollTo({top:0,behavior:"smooth"});if(id!=="upcomingPage")$("trailerVideo").pause()}
 document.querySelectorAll(".nav button").forEach(b=>b.addEventListener("click",()=>switchPage(b.dataset.page)));
 $("heroButton").addEventListener("click",()=>switchPage("catalogPage"));
-function renderHomeBanners(){homeBanners=(catalog.banners||[]).filter(b=>/banner\s*1/i.test(b.file||"")||/banner\s*3/i.test(b.file||""));if(!homeBanners.length)homeBanners=[{file:"",title:"Smart-Movies",description:"Descubre tus series y películas favoritas.",label:"Tu entretenimiento"}];bannerIndex=0;renderBanner();renderDots();if(bannerTimer)clearInterval(bannerTimer);if(homeBanners.length>1)bannerTimer=setInterval(()=>{bannerIndex=(bannerIndex+1)%homeBanners.length;renderBanner();renderDots();},7000);}
-function renderBanner(){const b=homeBanners[bannerIndex]||{};const image=$("heroImage");image.style.display=b.url?"block":"none";if(b.url){image.src=assetURL(b.url);image.onerror=()=>{image.style.display="none";};}$("heroEyebrow").textContent=b.label||"Descubre Smart-Movies";$("heroTitle").textContent=b.title||"Smart-Movies";$("heroDescription").textContent=b.description||"Tus series y películas en un solo lugar.";$("heroType").textContent=b.label||"Catálogo";$("heroCount").textContent=`${catalog.series.length} series · ${catalog.movies.length} películas`;}
-function renderDots(){const box=$("heroDots");box.replaceChildren(...homeBanners.map((b,i)=>{const btn=document.createElement("button");btn.type="button";btn.className="hero-dot"+(i===bannerIndex?" active":"");btn.setAttribute("aria-label","Mostrar banner "+(i+1));btn.onclick=()=>{bannerIndex=i;renderBanner();renderDots();};return btn;}));}
-function videoCardPreview(source){const preview=document.createElement("div");preview.className="card-preview";if(!source){const ph=document.createElement("div");ph.className="card-placeholder";ph.textContent="Vista previa no disponible";preview.append(ph);return {preview,video:null};}const v=document.createElement("video");v.muted=true;v.preload="metadata";v.playsInline=true;v.setAttribute("aria-hidden","true");setPreviewSrc(v,source);v.addEventListener("error",()=>{v.remove();if(!preview.querySelector(".card-placeholder")){const ph=document.createElement("div");ph.className="card-placeholder";ph.textContent="Vista previa no disponible";preview.prepend(ph);}},{once:true});preview.append(v);return {preview,video:v};}
-function createCard(item,isSeries=false){const card=document.createElement("button");card.type="button";card.className="card";const {preview,video}=videoCardPreview(isSeries?item.thumbnail_url:item.url);const type=document.createElement("div");type.className="card-type";type.textContent=isSeries?"SERIE · CARPETA":"PELÍCULA";preview.append(type);const body=document.createElement("div");body.className="card-body";const title=document.createElement("h3");title.className="card-title";title.textContent=item.title;body.append(title);if(isSeries){const count=document.createElement("span");count.className="count-pill";count.textContent=`${item.episode_count||item.episodes?.length||0} episodios`;body.append(count);}else if(item.description){const desc=document.createElement("div");desc.className="card-description";desc.textContent=item.description;body.append(desc);}card.append(preview,body);card.addEventListener("mouseenter",()=>video?.play().catch(()=>{}));card.addEventListener("mouseleave",()=>{if(video){video.pause();try{video.currentTime=previewStart(video);}catch(e){}}});card.addEventListener("click",()=>openDetail(item,isSeries));return card;}
-function renderCatalog(){const q=normalize(searchInput.value);const series=(catalog.series||[]).filter(item=>normalize(item.title).includes(q)||item.episodes.some(ep=>normalize(ep.title).includes(q)));const movies=(catalog.movies||[]).filter(item=>normalize(item.title).includes(q)||normalize(item.description).includes(q));$("seriesGrid").replaceChildren(...series.map(item=>createCard(item,true)));$("moviesGrid").replaceChildren(...movies.map(item=>createCard(item,false)));$("seriesCount").textContent=`${series.length} ${series.length===1?"serie":"series"}`;$("moviesCount").textContent=`${movies.length} ${movies.length===1?"película":"películas"}`;$("seriesEmpty").style.display=series.length?"none":"block";$("moviesEmpty").style.display=movies.length?"none":"block";}
+function renderHomeBanners(){
+ homeBanners=(catalog.banners||[]).filter(b=>/banner\s*1/i.test(b.file||"")||/banner\s*3/i.test(b.file||""));
+ if(!homeBanners.length)homeBanners=[{file:"",title:"Smart-Movies",description:"Descubre tus series y películas favoritas.",label:"Tu entretenimiento"}];
+ bannerIndex=0;renderBanner();renderDots();if(bannerTimer)clearInterval(bannerTimer);
+ if(homeBanners.length>1)bannerTimer=setInterval(()=>{bannerIndex=(bannerIndex+1)%homeBanners.length;renderBanner();renderDots()},7000)}
+function renderBanner(){
+ const b=homeBanners[bannerIndex]||{},image=$("heroImage");image.style.display=b.url?"block":"none";
+ if(b.url){image.src=assetURL(b.url);image.onerror=()=>{image.style.display="none"}}
+ $("heroEyebrow").textContent=b.label||"Descubre Smart-Movies";$("heroTitle").textContent=b.title||"Smart-Movies";
+ $("heroDescription").textContent=b.description||"Tus series y películas en un solo lugar.";$("heroType").textContent=b.label||"Catálogo";
+ $("heroCount").textContent=`${catalog.series.length} series · ${catalog.movies.length} películas`}
+function renderDots(){
+ $("heroDots").replaceChildren(...homeBanners.map((b,i)=>{const btn=document.createElement("button");btn.type="button";btn.className="hero-dot"+(i===bannerIndex?" active":"");btn.setAttribute("aria-label","Mostrar banner "+(i+1));btn.onclick=()=>{bannerIndex=i;renderBanner();renderDots()};return btn}))}
+function videoCardPreview(source){
+ const preview=document.createElement("div");preview.className="card-preview";
+ const ph=()=>{const x=document.createElement("div");x.className="card-placeholder";x.textContent="Vista previa no disponible";return x};
+ if(!source){preview.append(ph());return{preview,video:null}}
+ const v=document.createElement("video");v.muted=true;v.preload="metadata";v.playsInline=true;v.setAttribute("aria-hidden","true");setPreviewSrc(v,source);
+ v.addEventListener("error",()=>{v.remove();if(!preview.querySelector(".card-placeholder"))preview.prepend(ph())},{once:true});preview.append(v);return{preview,video:v}}
+function createCard(item,isSeries=false){
+ const card=document.createElement("button");card.type="button";card.className="card";
+ const{preview,video}=videoCardPreview(isSeries?item.thumbnail_url:item.url);
+ const type=document.createElement("div");type.className="card-type";type.textContent=isSeries?"SERIE · CARPETA":"PELÍCULA";preview.append(type);
+ const body=document.createElement("div");body.className="card-body";const title=document.createElement("h3");title.className="card-title";title.textContent=item.title;body.append(title);
+ if(isSeries){const c=document.createElement("span");c.className="count-pill";c.textContent=`${item.episode_count||item.episodes?.length||0} episodios`;body.append(c)}
+ else if(item.description){const d=document.createElement("div");d.className="card-description";d.textContent=item.description;body.append(d)}
+ card.append(preview,body);
+ card.addEventListener("mouseenter",()=>video?.play().catch(()=>{}));
+ card.addEventListener("mouseleave",()=>{if(video){video.pause();try{video.currentTime=previewStart(video)}catch(e){}}});
+ card.addEventListener("click",()=>openDetail(item,isSeries));return card}
+function renderCatalog(){
+ const q=normalize(searchInput.value);
+ const series=(catalog.series||[]).filter(i=>normalize(i.title).includes(q)||(i.episodes||[]).some(e=>normalize(e.title).includes(q)));
+ const movies=(catalog.movies||[]).filter(i=>normalize(i.title).includes(q)||normalize(i.description).includes(q));
+ $("seriesGrid").replaceChildren(...series.map(i=>createCard(i,true)));$("moviesGrid").replaceChildren(...movies.map(i=>createCard(i,false)));
+ $("seriesCount").textContent=`${series.length} ${series.length===1?"serie":"series"}`;$("moviesCount").textContent=`${movies.length} ${movies.length===1?"película":"películas"}`;
+ $("seriesEmpty").style.display=series.length?"none":"block";$("moviesEmpty").style.display=movies.length?"none":"block"}
 searchInput.addEventListener("input",renderCatalog);
-function openDetail(item,isSeries){currentItem={item,isSeries,episode:isSeries?(item.episodes?.[0]||null):item};$("detailTitle").textContent=item.title;$("detailDescription").textContent=isSeries?`${item.episode_count||item.episodes?.length||0} episodios. Selecciona un episodio para reproducirlo.`:(item.description||"");$("detailType").textContent=isSeries?"Serie":"Película";$("detailDuration").textContent="";$("watchButton").textContent=isSeries?"▶ Ver primer episodio":"▶ Ver película";$("episodes").style.display=isSeries?"block":"none";if(isSeries){const episodes=item.episodes||[];$("epList").replaceChildren(...episodes.map((ep,index)=>{const btn=document.createElement("button");btn.type="button";btn.className="ep"+(index===0?" current":"");btn.textContent=ep.title;btn.onclick=()=>{currentItem.episode=ep;document.querySelectorAll(".ep").forEach(e=>e.classList.toggle("current",e===btn));$("detailVideo").pause();setPreviewSrc(detailVideo,ep.url);detailVideo.play().catch(()=>{});$("watchButton").textContent="▶ Ver episodio";};return btn;}));if(episodes[0])setPreviewSrc(detailVideo,episodes[0].url);else detailVideo.removeAttribute("src");}else{setPreviewSrc(detailVideo,item.url);}
-detailVideo.addEventListener("loadedmetadata",()=>{$("detailDuration").textContent=fmtDuration(detailVideo.duration);},{once:true});detailVideo.play().catch(()=>{});detailModal.classList.add("open");document.body.style.overflow="hidden";$ ("watchButton").focus();}
-function closeDetail(){detailVideo.pause();detailVideo.removeAttribute("src");detailVideo.load();detailModal.classList.remove("open");if(!playerModal.classList.contains("open"))document.body.style.overflow="";}
-$("closeDetail").addEventListener("click",closeDetail);$("backButton").addEventListener("click",closeDetail);detailModal.addEventListener("click",e=>{if(e.target===detailModal)closeDetail();});$("watchButton").addEventListener("click",()=>{if(currentItem)openPlayer(currentItem.episode||currentItem.item);});
-function openPlayer(item){detailVideo.pause();$("playerTitle").textContent=item.title||item.file_name||"Smart-Movies";playerVideo.src=assetURL(item.url);playerModal.classList.add("open");document.body.style.overflow="hidden";playerVideo.play().catch(()=>{});}
-function closePlayer(){playerVideo.pause();playerVideo.removeAttribute("src");playerVideo.load();playerModal.classList.remove("open");document.body.style.overflow=detailModal.classList.contains("open")?"hidden":"";if(detailModal.classList.contains("open"))detailVideo.play().catch(()=>{});}
-playerVideo.addEventListener("error",()=>{if(playerVideo.getAttribute("src"))showError("No se pudo cargar el vídeo. Recarga el catálogo e inténtalo de nuevo.");});$("closePlayer").addEventListener("click",closePlayer);playerModal.addEventListener("click",e=>{if(e.target===playerModal)closePlayer();});
-$("trailerButton").addEventListener("click",()=>{switchPage("upcomingPage");const trailer=$("trailerVideo");trailer.scrollIntoView({behavior:"smooth",block:"center"});trailer.play().catch(()=>showError("No se pudo iniciar el tráiler. Comprueba que trailer.mp4 está junto al HTML."));});
- document.addEventListener("keydown",e=>{if(e.key!=="Escape")return;if(playerModal.classList.contains("open"))closePlayer();else if(detailModal.classList.contains("open"))closeDetail();});
-async function start(){if(!window.URLS||!URLS.movies||!URLS.account||!URLS.auth){failScreen("No se encontraron URLS.movies, URLS.account o URLS.auth. Comprueba url.js.");return;}const token=tokenValue();if(!token){goAuth();return;}try{const authorized=await checkAccount(token);if(!authorized){for(const key of new Set(TOKEN_KEYS)){try{localStorage.removeItem(key);}catch(e){}}goAuth();return;}catalog=await loadCatalog(token);renderHomeBanners();renderCatalog();loading.style.display="none";app.style.display="block";}catch(error){if(error.auth){for(const key of new Set(TOKEN_KEYS)){try{localStorage.removeItem(key);}catch(e){}}goAuth();return;}console.error(error);failScreen(error.message||"No se pudo iniciar Smart-Movies. Revisa las URLs y la conexión con la API.");}}
+function openDetail(item,isSeries){
+ currentItem={item,isSeries,episode:isSeries?(item.episodes?.[0]||null):item};
+ $("detailTitle").textContent=item.title;
+ $("detailDescription").textContent=isSeries?`${item.episode_count||item.episodes?.length||0} episodios. Selecciona un episodio para reproducirlo.`:(item.description||"");
+ $("detailType").textContent=isSeries?"Serie":"Película";$("detailDuration").textContent="";
+ $("watchButton").textContent=isSeries?"▶ Ver primer episodio":"▶ Ver película";$("episodes").style.display=isSeries?"block":"none";
+ if(isSeries){const eps=item.episodes||[];
+  $("epList").replaceChildren(...eps.map((ep,i)=>{const btn=document.createElement("button");btn.type="button";btn.className="ep"+(i===0?" current":"");btn.textContent=ep.title;
+   btn.onclick=()=>{currentItem.episode=ep;document.querySelectorAll(".ep").forEach(e=>e.classList.toggle("current",e===btn));detailVideo.pause();setPreviewSrc(detailVideo,ep.url);detailVideo.play().catch(()=>{});$("watchButton").textContent="▶ Ver episodio"};return btn}));
+  if(eps[0])setPreviewSrc(detailVideo,eps[0].url);else detailVideo.removeAttribute("src")}
+ else setPreviewSrc(detailVideo,item.url);
+ detailVideo.addEventListener("loadedmetadata",()=>{$("detailDuration").textContent=fmtDuration(detailVideo.duration)},{once:true});
+ detailVideo.play().catch(()=>{});detailModal.classList.add("open");document.body.style.overflow="hidden";$("watchButton").focus()}
+function closeDetail(){detailVideo.pause();detailVideo.removeAttribute("src");detailVideo.load();detailModal.classList.remove("open");if(!playerModal.classList.contains("open"))document.body.style.overflow=""}
+$("closeDetail").addEventListener("click",closeDetail);$("backButton").addEventListener("click",closeDetail);
+detailModal.addEventListener("click",e=>{if(e.target===detailModal)closeDetail()});
+$("watchButton").addEventListener("click",()=>{if(currentItem)openPlayer(currentItem.episode||currentItem.item)});
+function openPlayer(item){detailVideo.pause();$("playerTitle").textContent=item.title||item.file_name||"Smart-Movies";playerVideo.src=assetURL(item.url);playerModal.classList.add("open");document.body.style.overflow="hidden";playerVideo.play().catch(()=>{})}
+function closePlayer(){playerVideo.pause();playerVideo.removeAttribute("src");playerVideo.load();playerModal.classList.remove("open");document.body.style.overflow=detailModal.classList.contains("open")?"hidden":"";if(detailModal.classList.contains("open"))detailVideo.play().catch(()=>{})}
+playerVideo.addEventListener("error",()=>{if(playerVideo.getAttribute("src"))showError("No se pudo cargar el vídeo. Recarga el catálogo e inténtalo de nuevo.")});
+$("closePlayer").addEventListener("click",closePlayer);playerModal.addEventListener("click",e=>{if(e.target===playerModal)closePlayer()});
+$("trailerButton").addEventListener("click",()=>{switchPage("upcomingPage");const t=$("trailerVideo");t.scrollIntoView({behavior:"smooth",block:"center"});t.play().catch(()=>showError("No se pudo iniciar el tráiler. Comprueba que trailer.mp4 está junto al HTML."))});
+document.addEventListener("keydown",e=>{if(e.key!=="Escape")return;if(playerModal.classList.contains("open"))closePlayer();else if(detailModal.classList.contains("open"))closeDetail()});
+async function start(){
+ /* Diagnóstico preciso: dice exactamente qué clave falta y cuáles lee de url.js */
+ const missing=[["movies",API_BASE],["account",ACCOUNT_API],["auth",U.auth]].filter(x=>!x[1]).map(x=>"URLS."+x[0]);
+ if(missing.length){failScreen("Falta en url.js: "+missing.join(", ")+". Claves que sí encuentro: "+(Object.keys(U).join(", ")||"ninguna (¿se cargó url.js?)")+".");return}
+ const token=tokenValue();if(!token){goAuth();return}
+ try{
+  if(!(await checkAccount(token))){clearTokens();goAuth();return}
+  catalog=await loadCatalog(token);renderHomeBanners();renderCatalog();loading.style.display="none";app.style.display="block"}
+ catch(error){
+  if(error.auth){clearTokens();goAuth();return}
+  console.error(error);failScreen((error.message||"No se pudo iniciar Smart-Movies.")+" (API: "+API_BASE+")")}}
 start();
 </script>
 </body>

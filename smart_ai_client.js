@@ -5,7 +5,7 @@
     const configured =
       typeof URLS !== 'undefined' && URLS && URLS.ai
         ? URLS.ai
-        : window.SMART_AI_API_URL || '';
+        : window.SMART_AI_API_URL || 'https://generating-increase-italiano-precious.trycloudflare.com';
 
     return String(configured).replace(/\/+$/, '');
   }

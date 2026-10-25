@@ -7,6 +7,8 @@ const URLS = {
 
   call: "https://kenneth-mitchell-hong-corner.trycloudflare.com",
 
+  movies: "https://smart-movies.trycloudflare.com",
+
   cloud: "https://smart-cloud.trycloudflare.com",
 
   sound: "https://smart-sound.trycloudflare.com",

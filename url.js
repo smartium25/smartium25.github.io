@@ -1,11 +1,11 @@
 
 const URLS = {
 
-  web: "https://smartweb.trycloudflare.com",
+  web: "https://smart-web.trycloudflare.com",
 
-  chat: "https://there-comes-converted-marco.trycloudflare.com",
+  chat: "https://smart-chat.trycloudflare.com",
 
-  call: "https://kenneth-mitchell-hong-corner.trycloudflare.com",
+  call: "https://smart-call.trycloudflare.com",
 
   movies: "https://smart-movies.trycloudflare.com",
 
@@ -17,7 +17,7 @@ const URLS = {
 
   moderation: "https://moderation.trycloudflare.com",
 
-  account: "https://titans-latter-opinions-invitations.trycloudflare.com",
+  account: "https://smart-account.trycloudflare.com",
 
   auth: "https://smartium25.github.io/auth.html"
 

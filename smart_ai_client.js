@@ -9,7 +9,7 @@
     const configured =
       (typeof URLS !== 'undefined' && URLS && URLS.ai) ||
       window.SMART_AI_API_URL ||
-      'https:/feeds-predictions-laboratory-done.trycloudflare.com';
+      'https:/cities-son-careers-further.trycloudflare.com';
     const base = String(configured).trim().replace(/\/+$/, '');
     if (!base) {
       throw new Error('Falta URLS.ai en url.js. Añade la URL actual del túnel Smart-AI, puerto 8008.');

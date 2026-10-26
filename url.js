@@ -1,23 +1,23 @@
 
 const URLS = {
 
-  web: "https://roughly-union-ministries-flavor.trycloudflare.com",
+  web: "https://assigned-satisfied-mesh-console.trycloudflare.com",
 
-  chat: "https://smithsonian-irrigation-der-henderson.trycloudflare.com",
+  chat: "https://promises-actress-griffin-thread.trycloudflare.com",
 
-  call: "https://eng-pick-sensitivity-favorites.trycloudflare.com",
+  call: "https://anticipated-patent-recordings-rebecca.trycloudflare.com",
 
-  movies: "https://assessment-pushing-stationery-wonderful.trycloudflare.com",
+  movies: "https://smoking-inside-elsewhere-quantities.trycloudflare.com",
 
-  cloud: "https://carol-warnings-roots-electrical.trycloudflare.com",
+  cloud: "https://diagnostic-directly-cia-nuclear.trycloudflare.com",
 
-  sound: "https://advance-delight-idaho-met.trycloudflare.com",
+  sound: "https://clarity-imperial-dream-occasional.trycloudflare.com",
 
-  ai: "https://generating-increase-italiano-precious.trycloudflare.com",
+  ai: "https:/feeds-predictions-laboratory-done.trycloudflare.com",
 
-  moderation: "https://managers-generic-driving.trycloudflare.com",
+  moderation: "https://right-illustration-pas-pipeline.trycloudflare.com",
 
-  account: "https://charms-solo-johnston-blend.trycloudflare.com",
+  account: "https://mine-council-alliance-php.trycloudflare.com",
 
   auth: "https://smartium25.github.io/auth.html"
 

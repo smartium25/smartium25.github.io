@@ -13,11 +13,11 @@ const URLS = {
 
   sound: "https://clarity-imperial-dream-occasional.trycloudflare.com",
 
-  ai: "https:/feeds-predictions-laboratory-done.trycloudflare.com",
+  ai: "https:/cities-son-careers-further.trycloudflare.com",
 
   moderation: "https://right-illustration-pas-pipeline.trycloudflare.com",
 
-  account: "https://mine-council-alliance-php.trycloudflare.com",
+  account: "https://such-cancer-performed-cdt.trycloudflare.com",
 
   auth: "https://smartium25.github.io/auth.html"
 

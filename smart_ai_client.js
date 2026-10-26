@@ -7,7 +7,7 @@
     const configured =
       (typeof URLS !== 'undefined' && URLS && URLS.ai) ||
       window.SMART_AI_API_URL ||
-      '';
+      'https://generating-increase-italiano-precious.trycloudflare.com';
 
     const base = String(configured).trim().replace(/\/+$/, '');
 

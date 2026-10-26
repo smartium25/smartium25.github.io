@@ -133,6 +133,28 @@ function toast(m,type){const g=$('globalStatus');g.textContent=m;g.classList.rem
 function setAuthStatus(m,type){$('authStatus').textContent=m||'';$('authStatus').className='status'+(type?' '+type:'')}
 function setEd(m,type){const e=$('editorStatus');e.textContent=m||'';e.style.color=type==='error'?'var(--red)':type==='success'?'var(--green)':'var(--muted)'}
 
+/* Diálogo de confirmación integrado en Smart-Cloud. */
+function askConfirm(message,title='Confirmar acción'){
+ return new Promise(resolve=>{
+  const previousFocus=document.activeElement;
+  const overlay=el('div','modal open');overlay.style.zIndex='200';
+  const box=el('div','modal-box');box.style.width='min(430px, 100%)';box.setAttribute('role','dialog');box.setAttribute('aria-modal','true');box.setAttribute('aria-label',title);
+  const header=el('div','modal-head');header.appendChild(el('div','modal-title',title));
+  const closeBtn=el('button','btn small','✕');closeBtn.type='button';closeBtn.setAttribute('aria-label','Cancelar');header.appendChild(closeBtn);
+  const body=el('div','modal-body');body.appendChild(el('p',null,message));
+  const footer=el('div','modal-foot');footer.appendChild(el('span','note','Esta acción no se puede deshacer.'));
+  const actions=el('div','modal-actions');const cancelBtn=el('button','btn','Cancelar');cancelBtn.type='button';
+  const confirmBtn=el('button','btn danger','Eliminar archivo');confirmBtn.type='button';actions.append(cancelBtn,confirmBtn);footer.appendChild(actions);
+  box.append(header,body,footer);overlay.appendChild(box);
+  let done=false;
+  function finish(result){if(done)return;done=true;overlay.remove();document.removeEventListener('keydown',onKeyDown);if(previousFocus&&typeof previousFocus.focus==='function')previousFocus.focus();resolve(result)}
+  function onKeyDown(event){if(event.key==='Escape'){event.preventDefault();finish(false)}}
+  cancelBtn.onclick=()=>finish(false);closeBtn.onclick=()=>finish(false);confirmBtn.onclick=()=>finish(true);
+  overlay.addEventListener('click',event=>{if(event.target===overlay)finish(false)});
+  document.addEventListener('keydown',onKeyDown);document.body.appendChild(overlay);cancelBtn.focus();
+ });
+}
+
 /* ---- Smart-Token: acepta cualquiera de las claves usadas por las apps Smart ---- */
 function readToken(){for(const k of KEYS){const v=(localStorage.getItem(k)||'').replace(/^"|"$/g,'').trim();if(v)return v}return null}
 function clearToken(){KEYS.forEach(k=>localStorage.removeItem(k));S.token=null}
@@ -203,7 +225,8 @@ async function uploadFiles(set){
  for(let i=0;i<files.length;i++){$('listStatus').textContent='Subiendo '+(i+1)+'/'+files.length+': '+files[i].name;
   try{await xhrUpload(files[i]);toast('Subido: '+files[i].name,'success')}catch(e){toast(files[i].name+': '+e.message,'error')}}
  $('listStatus').textContent='';$('fileInput').value='';await loadFiles()}
-async function remove(f){if(!confirm('¿Eliminar “'+f.name+'” permanentemente?'))return;
+async function remove(f){
+ if(!await askConfirm('¿Eliminar “'+f.name+'” permanentemente?','Eliminar archivo'))return;
  try{await api('/api/files/'+encodeURIComponent(f.id),{method:'DELETE'});toast('Archivo eliminado.','success');await loadFiles()}catch(e){toast(e.message,'error')}}
 async function download(f){
  try{toast('Preparando '+f.name+'…');const {response}=await api('/api/files/'+encodeURIComponent(f.id)+'/content?download=true'),u=URL.createObjectURL(await response.blob()),a=document.createElement('a');

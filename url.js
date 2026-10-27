@@ -1,7 +1,7 @@
 
 const URLS = {
 
-  web: "https://assigned-satisfied-mesh-console.trycloudflare.com",
+  web: "https://metropolitan-streaming-speakers-improvements.trycloudflare.com",
 
   chat: "https://promises-actress-griffin-thread.trycloudflare.com",
 

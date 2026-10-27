@@ -64,13 +64,14 @@
 
     /* CONTENIDO PRINCIPAL */
     .main{min-width:0;min-height:0;display:flex;flex-direction:column;position:relative;background:radial-gradient(ellipse at 52% -26%,rgba(0,229,242,.055),transparent 43%),var(--bg)}
+    .load-bar{position:absolute;z-index:5;top:0;left:0;height:2px;width:0;background:var(--cyan);box-shadow:0 0 10px rgba(0,229,242,.6);opacity:0;transition:width .25s ease,opacity .3s ease;pointer-events:none}
     .topbar{min-height:68px;flex:none;border-bottom:1px solid var(--border);display:flex;align-items:center;justify-content:space-between;gap:12px;padding:0 26px;background:rgba(17,21,26,.87)}
     .topbar-left{display:flex;align-items:center;gap:12px;min-width:0}
     .mobile-menu{display:none;width:36px;height:36px;border:1px solid var(--border);border-radius:10px;color:var(--text);background:var(--panel)}
     .page-title{font-size:15px;font-weight:800}
     .page-subtitle{font-size:11px;color:var(--muted);margin-top:3px}
     .topbar-right{display:flex;align-items:center;gap:9px}
-    .model-select{max-width:155px;min-width:125px;cursor:pointer}
+    .model-select{max-width:190px;min-width:140px;cursor:pointer}
     .connection-pill{display:flex;align-items:center;gap:7px;padding:7px 10px;border:1px solid var(--border);background:#171d23;color:var(--muted);border-radius:999px;font-size:11px;white-space:nowrap;max-width:300px}
     .connection-pill span:last-child{overflow:hidden;text-overflow:ellipsis}
     .connection-pill .dot{background:#64717f;box-shadow:none}
@@ -156,7 +157,7 @@
       .topbar{min-height:60px;padding:0 14px}
       .connection-pill{font-size:10px;padding:7px 8px;max-width:150px}
       .top-button{font-size:11px;padding:0 8px}
-      .model-select{max-width:112px;min-width:96px}
+      .model-select{max-width:124px;min-width:100px}
       .messages{padding:22px 15px 16px}
       .composer-area{padding:8px 12px 15px}
       .welcome{padding:18px 0 28px}
@@ -203,15 +204,16 @@
     </aside>
     <div class="mobile-overlay" id="mobileOverlay"></div>
     <main class="main">
+      <div class="load-bar" id="loadBar" aria-hidden="true"></div>
       <header class="topbar">
         <div class="topbar-left">
           <button class="mobile-menu" id="mobileMenuBtn" type="button" aria-label="Abrir menú">☰</button>
           <div><div class="page-title" id="conversationTitle">Smart AI</div><div class="page-subtitle">Tu asistente conectado al ecosistema Smart</div></div>
         </div>
         <div class="topbar-right">
-          <select class="top-button model-select" id="modelMode" aria-label="Calidad del modelo" title="Rápido usa menos recursos; mejor calidad suele responder mejor pero puede tardar más">
-            <option value="fast">Rápido · 1B</option>
-            <option value="balanced">Mejor calidad · 3B</option>
+          <select class="top-button model-select" id="modelMode" aria-label="Calidad del modelo" title="Rápido descarga un modelo pequeño (unos 300 MB) y abre casi al instante. Mejor calidad responde mejor pero descarga más.">
+            <option value="fast">Rápido · ligero</option>
+            <option value="balanced">Mejor calidad · más pesado</option>
           </select>
           <div class="connection-pill" id="connectionPill"><span class="dot"></span><span id="connectionLabel">Conectando API</span></div>
           <button class="top-button" id="headerMemoryBtn" type="button" title="Gestionar memoria">Memoria</button>
@@ -231,7 +233,7 @@
               <div class="composer-right"><button class="send-button" id="sendBtn" type="button" aria-label="Enviar mensaje" title="Enviar">↑</button></div>
             </div>
           </div>
-          <div class="hint">Las respuestas aparecen mientras se generan. El modelo se guarda en caché del navegador después de la primera descarga.</div>
+          <div class="hint">Las respuestas aparecen mientras se generan. El modelo se descarga en segundo plano la primera vez y se guarda en el navegador; las siguientes veces abre al instante.</div>
         </div>
       </section>
     </main>
@@ -264,9 +266,12 @@
     'use strict';
     const $ = id => document.getElementById(id);
     const state = {user:null,chats:[],activeChat:null,memory:'',sending:false,attachment:null,toastTimer:null};
+
+    // Modelos pequeños: descargan mucho menos que antes (1B ≈ 700 MB y 3B ≈ 1.8 GB).
+    // Rápido: Qwen2.5-0.5B (≈300 MB, buen español). Mejor calidad: Llama-3.2-1B (≈700 MB).
     const TEXT_MODELS = {
-      fast: 'Llama-3.2-1B-Instruct-q4f16_1-MLC',
-      balanced: 'Llama-3.2-3B-Instruct-q4f16_1-MLC'
+      fast: 'Qwen2.5-0.5B-Instruct-q4f16_1-MLC',
+      balanced: 'Llama-3.2-1B-Instruct-q4f16_1-MLC'
     };
     const VISION_MODEL = 'Phi-3.5-vision-instruct-q4f16_1-MLC';
     function selectedTextModel(){ return $('modelMode')?.value === 'balanced' ? TEXT_MODELS.balanced : TEXT_MODELS.fast; }
@@ -343,6 +348,10 @@
     function resizeInput(){const input=$('messageInput');input.style.height='auto';input.style.height=Math.min(input.scrollHeight,180)+'px';}
     function setConnectionLabel(text){const label=$('connectionLabel');if(label)label.textContent=text;}
 
+    // Barra de progreso fina arriba de la pantalla mientras se descarga el modelo
+    function setLoad(p){const b=$('loadBar');if(!b)return;b.style.opacity='1';b.style.width=Math.round(Math.max(0,Math.min(1,p))*100)+'%';}
+    function hideLoad(){const b=$('loadBar');if(!b)return;b.style.width='100%';setTimeout(()=>{b.style.opacity='0';setTimeout(()=>{b.style.width='0';},320);},350);}
+
     async function loadWebLLMModule(){
       if(webllmModulePromise) return webllmModulePromise;
       const sources=[
@@ -379,11 +388,20 @@
           try{
             const module=await loadWebLLMModule();
             const isVision=modelId===VISION_MODEL;
-            setConnectionLabel(isVision?'Preparando modelo visual (más pesado)…':(modelId===TEXT_MODELS.balanced?'Preparando modelo de mejor calidad…':'Preparando modelo rápido…'));
-            return await module.CreateMLCEngine(modelId,{
-              initProgressCallback:progress=>setConnectionLabel(String(progress?.text||(isVision?'Descargando modelo visual…':'Descargando modelo…')).slice(0,85))
+            setConnectionLabel(isVision?'Preparando modelo visual (pesado)…':'Preparando modelo…');
+            setLoad(0.02);
+            const engine=await module.CreateMLCEngine(modelId,{
+              initProgressCallback:progress=>{
+                const p=typeof progress?.progress==='number'?progress.progress:0;
+                setLoad(p);
+                const pct=Math.round(p*100);
+                setConnectionLabel(pct>=100?'Iniciando modelo…':(isVision?'Descargando modelo visual… ':'Cargando modelo… ')+pct+'%');
+              }
             });
+            hideLoad();
+            return engine;
           }catch(error){
+            hideLoad();
             webllmEngines.delete(modelId);
             const detail=error?.message||String(error);
             if(modelId===VISION_MODEL) throw new Error('No se pudo iniciar el modelo visual. Necesita bastante memoria gráfica; el chat de texto puede seguir funcionando. '+detail);
@@ -395,10 +413,24 @@
       return webllmEngines.get(modelId);
     }
 
+    // Descarga el modelo en segundo plano apenas abre la página, para que ya esté listo cuando el usuario escriba.
+    // No lo hace con ahorro de datos, red móvil o conexión lenta.
+    function shouldWarmUp(){
+      if(!navigator.gpu) return false;
+      const c=navigator.connection;
+      if(c&&(c.saveData||c.type==='cellular'||/(^|-)2g$/.test(c.effectiveType||''))) return false;
+      return true;
+    }
+    function warmUpModel(){
+      if(!shouldWarmUp()) return;
+      const run=()=>getWebLLMEngine().then(()=>setConnectionLabel('Modelo listo')).catch(()=>setConnectionLabel('API conectada · el modelo se cargará al escribir'));
+      if('requestIdleCallback' in window) requestIdleCallback(run,{timeout:4000}); else setTimeout(run,1500);
+    }
+
     async function generateWithWebLLM(messages,contextData,onToken,hasImages){
       const modelId=hasImages?VISION_MODEL:selectedTextModel();
       const engine=await getWebLLMEngine(modelId);
-      setConnectionLabel(hasImages?'Analizando imagen…':(modelId===TEXT_MODELS.balanced?'Generando (mejor calidad)…':'Generando respuesta rápida…'));
+      setConnectionLabel(hasImages?'Analizando imagen…':'Generando respuesta…');
       let answer='';
       try{
         const stream=await engine.chat.completions.create({
@@ -416,7 +448,7 @@
           }
         }
         if(!answer.trim()) throw new Error('El modelo terminó sin generar texto.');
-        setConnectionLabel(hasImages?'Modelo visual listo':'Modelo rápido listo');
+        setConnectionLabel('Modelo listo');
         return answer.trim();
       }catch(error){
         setConnectionLabel('Error al generar');
@@ -491,9 +523,9 @@
     function toggleMobileSidebar(){$('sidebar').classList.toggle('open');$('mobileOverlay').classList.toggle('show');}
     async function logout(){const base=String(getUrls().account||'').replace(/\/+$/,'');try{if(token()&&base)await fetch(base+'/api/logout',{method:'POST',headers:authHeaders()});}catch(_){}localStorage.removeItem('smart_token');localStorage.removeItem('smart_account_token');redirectToAuth();}
 
-    async function initialize(){receiveToken();try{const authenticated=await checkAccount();if(!authenticated)return;await SmartAIStore.health();await migrateLegacyIfNeeded();await Promise.all([loadRemoteMemory(),loadRemoteChats()]);$('connectionPill').classList.add('online');setConnectionLabel('API conectada · WebLLM bajo demanda');}catch(error){setConnectionLabel('Sin conexión');showToast(error.message||'No se pudo iniciar Smart AI.');$('chatList').replaceChildren();const msg=document.createElement('div');msg.className='empty-list';msg.textContent=error.message||'Error al cargar Smart AI API.';$('chatList').appendChild(msg);}}
+    async function initialize(){receiveToken();try{const authenticated=await checkAccount();if(!authenticated)return;await SmartAIStore.health();await migrateLegacyIfNeeded();await Promise.all([loadRemoteMemory(),loadRemoteChats()]);$('connectionPill').classList.add('online');setConnectionLabel('API conectada');warmUpModel();}catch(error){setConnectionLabel('Sin conexión');showToast(error.message||'No se pudo iniciar Smart AI.');$('chatList').replaceChildren();const msg=document.createElement('div');msg.className='empty-list';msg.textContent=error.message||'Error al cargar Smart AI API.';$('chatList').appendChild(msg);}}
 
-    // Modelo rápido por defecto para minimizar la espera. El de 3B es opcional.
+    // Modelo rápido (ligero) por defecto. El de mejor calidad es opcional.
     try {
       const savedMode = localStorage.getItem('smart_ai_model_mode');
       $('modelMode').value = savedMode === 'balanced' ? 'balanced' : 'fast';
@@ -501,8 +533,9 @@
     $('modelMode').addEventListener('change', () => {
       try { localStorage.setItem('smart_ai_model_mode', $('modelMode').value); } catch (_) {}
       showToast($('modelMode').value === 'balanced'
-        ? 'Modelo de mejor calidad seleccionado. La primera carga tarda más y usa más memoria.'
+        ? 'Mejor calidad seleccionado. La primera vez descarga más (≈700 MB).'
         : 'Modelo rápido seleccionado.');
+      warmUpModel();
     });
 
     $('newChatBtn').addEventListener('click',createChat);

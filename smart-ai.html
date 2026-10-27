@@ -61,6 +61,9 @@
     .dot{width:6px;height:6px;border-radius:50%;background:var(--green);box-shadow:0 0 8px rgba(66,214,111,.3);flex:none}
     .logout{color:#8f9aa6;background:transparent;border:0;font-size:17px;padding:6px;border-radius:7px}
     .logout:hover{color:var(--red);background:rgba(255,104,117,.08)}
+    .side-status{display:flex;align-items:center;gap:9px;padding:4px 10px 10px;font-size:12px;color:var(--muted);line-height:1.4}
+    .status-dot{width:7px;height:7px;border-radius:50%;background:#64717f;flex:none}
+    .status-dot.on{background:var(--green);box-shadow:0 0 8px rgba(66,214,111,.3)}
 
     /* CONTENIDO PRINCIPAL */
     .main{min-width:0;min-height:0;display:flex;flex-direction:column;position:relative;background:radial-gradient(ellipse at 52% -26%,rgba(0,229,242,.055),transparent 43%),var(--bg)}
@@ -193,6 +196,8 @@
         <div class="chat-list" id="chatList"><div class="empty-list">Cargando conversaciones del servidor…</div></div>
       </section>
       <div class="side-bottom">
+        <div class="section-label">Conexiones</div>
+        <div class="side-status" title="Smart AI lee tus chats de Smart-Chat cuando se lo pides"><span class="status-dot" id="chatStatusDot"></span><span id="chatStatusText">Smart-Chat: comprobando…</span></div>
         <div class="section-label">Preferencias</div>
         <button class="side-action" id="memoryBtn" type="button"><span class="link-icon">◈</span><span>Memoria de Smart AI</span></button>
       </div>
@@ -245,7 +250,7 @@
       <h1>Hola, soy <span>Smart AI</span></h1>
       <p>Tu asistente del ecosistema Smart. Puedes preguntarme algo o pedirme que revise una conversación de Smart-Chat o un archivo guardado en Smart-Cloud con palabras normales.</p>
       <div class="suggestions">
-        <button class="suggestion" type="button" data-prompt="Dime qué dijo Alex en nuestra conversación de Smart-Chat."><span class="suggestion-icon">▤</span><span><strong>Revisar una conversación</strong><small>Puedes preguntar por una persona de forma natural.</small></span></button>
+        <button class="suggestion" type="button" data-prompt="¿Quién me escribió últimamente en Smart-Chat y qué me dijeron?"><span class="suggestion-icon">▤</span><span><strong>Revisar mis chats</strong><small>Pregunta quién te escribió, qué te dijeron o qué dijo una persona concreta.</small></span></button>
         <button class="suggestion" type="button" data-prompt="Revisa mis archivos de Smart-Cloud y dime qué tipos de archivos tengo guardados."><span class="suggestion-icon">▱</span><span><strong>Explorar mis archivos</strong><small>Busca documentos, fotos, videos y audio en Smart-Cloud.</small></span></button>
         <button class="suggestion" type="button" data-prompt="Explícame este tema paso a paso y dame un ejemplo sencillo."><span class="suggestion-icon">⌘</span><span><strong>Aprender algo nuevo</strong><small>Explicaciones claras, ejemplos y pasos.</small></span></button>
         <button class="suggestion" type="button" data-prompt="Ayúdame a organizar mis ideas en un plan con pasos concretos."><span class="suggestion-icon">☷</span><span><strong>Organizar ideas</strong><small>Convierte una idea en un plan fácil de seguir.</small></span></button>
@@ -523,7 +528,28 @@
     function toggleMobileSidebar(){$('sidebar').classList.toggle('open');$('mobileOverlay').classList.toggle('show');}
     async function logout(){const base=String(getUrls().account||'').replace(/\/+$/,'');try{if(token()&&base)await fetch(base+'/api/logout',{method:'POST',headers:authHeaders()});}catch(_){}localStorage.removeItem('smart_token');localStorage.removeItem('smart_account_token');redirectToAuth();}
 
-    async function initialize(){receiveToken();try{const authenticated=await checkAccount();if(!authenticated)return;await SmartAIStore.health();await migrateLegacyIfNeeded();await Promise.all([loadRemoteMemory(),loadRemoteChats()]);$('connectionPill').classList.add('online');setConnectionLabel('API conectada');warmUpModel();}catch(error){setConnectionLabel('Sin conexión');showToast(error.message||'No se pudo iniciar Smart AI.');$('chatList').replaceChildren();const msg=document.createElement('div');msg.className='empty-list';msg.textContent=error.message||'Error al cargar Smart AI API.';$('chatList').appendChild(msg);}}
+    async function refreshChatStatus(){
+      const dot=$('chatStatusDot'),text=$('chatStatusText');
+      try{
+        const status=await SmartAIStore.chatStatus();
+        if(status.connected){
+          dot.classList.add('on');
+          const parts=[status.contacts+(status.contacts===1?' contacto':' contactos')];
+          if(status.groups)parts.push(status.groups+(status.groups===1?' grupo':' grupos'));
+          text.textContent='Smart-Chat conectado · '+parts.join(' · ');
+        }else{
+          dot.classList.remove('on');
+          text.textContent='Smart-Chat no responde';
+          text.title=status.detail||'';
+        }
+      }catch(error){
+        dot.classList.remove('on');
+        text.textContent='Smart-Chat: sin conexión';
+        text.title=error&&error.message?error.message:'';
+      }
+    }
+
+    async function initialize(){receiveToken();try{const authenticated=await checkAccount();if(!authenticated)return;await SmartAIStore.health();await migrateLegacyIfNeeded();await Promise.all([loadRemoteMemory(),loadRemoteChats()]);$('connectionPill').classList.add('online');setConnectionLabel('API conectada');refreshChatStatus();warmUpModel();}catch(error){setConnectionLabel('Sin conexión');showToast(error.message||'No se pudo iniciar Smart AI.');$('chatList').replaceChildren();const msg=document.createElement('div');msg.className='empty-list';msg.textContent=error.message||'Error al cargar Smart AI API.';$('chatList').appendChild(msg);}}
 
     // Modelo rápido (ligero) por defecto. El de mejor calidad es opcional.
     try {

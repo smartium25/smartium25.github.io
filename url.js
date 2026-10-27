@@ -13,7 +13,7 @@ const URLS = {
 
   sound: "https://qualifiations-specifies-distant-grade.trycloudflare.com",
 
-  ai: "https://cities-son-careers-further.trycloudflare.com",
+  ai: "https://housewares-accessibility-convinced-null.trycloudflare.com",
 
   moderation: "https://right-illustration-pas-pipeline.trycloudflare.com",
 

@@ -11,7 +11,7 @@ const URLS = {
 
   cloud: "https://diagnostic-directly-cia-nuclear.trycloudflare.com",
 
-  sound: "https://qualifiations-specified-distant-grade.trycloudflare.com",
+  sound: "https://qualifications-specified-distant-grade.trycloudflare.com",
 
   ai: "https://housewares-accessibility-convinced-null.trycloudflare.com",
 

@@ -5,7 +5,7 @@ const URLS = {
 
   chat: "https://promises-actress-griffin-thread.trycloudflare.com",
 
-  call: "https://anticipated-patent-recordings-rebecca.trycloudflare.com",
+  call: "https://village-scanning-dame-hamilton.trycloudflare.com",
 
   movies: "https://smoking-inside-elsewhere-quantities.trycloudflare.com",
 

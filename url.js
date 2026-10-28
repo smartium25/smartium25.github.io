@@ -17,7 +17,7 @@ const URLS = {
 
   moderation: "https://right-illustration-pas-pipeline.trycloudflare.com",
 
-  account: "https://issues-incidende-source-celebrities.trycloudflare.com",
+  account: "https://issues-incidence-source-celebrities.trycloudflare.com",
 
   auth: "https://smartium25.github.io/auth.html"
 
